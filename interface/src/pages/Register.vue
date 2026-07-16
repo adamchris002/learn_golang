@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue"
+import { useAuthStore } from "@/stores/auth"
 
 import loginBackground from "@/assets/images/background.png"
 
@@ -8,9 +9,12 @@ import { useItemScale } from "@/composable/pageAdjuster"
 import { register } from "@/services/authServices"
 import router from "@/router"
 
+const authStore = useAuthStore()
+
 const firstName = ref<string>("")
 const lastName = ref<string>("")
 const username = ref<string>("")
+const email = ref<string>("")
 const password = ref<string>("")
 
 const credentialIncomplete = ref(false)
@@ -18,11 +22,11 @@ const credentialIncomplete = ref(false)
 const scale = useItemScale()
 
 function handleRegister() {
-    if (!username.value || !password.value) {
+    if (!username.value || !password.value || !firstName.value || !lastName.value || !email.value) {
+        authStore.setMessage({ status: 400, messageTitle: 'Register Fail', message: "Please fill in all fields" })
         credentialIncomplete.value = true
     } else {
-        const data = { firstName: firstName.value, lastName: lastName.value, username: username.value, password: password.value }
-
+        const data = { firstName: firstName.value, lastName: lastName.value, username: username.value, email: email.value, password: password.value }
         register(data)
     }
 }
@@ -62,6 +66,11 @@ watch([username, password, firstName, lastName], () => {
                         <n-input :status="credentialIncomplete && username.length === 0 ? 'error' : 'success'"
                             type="text" v-model:value="username" placeholder="Username" />
                     </div>
+                    <div class="mb-4">
+                        <p class="font-jakrta mb-2 font-light text-[13px] text-white">Email: </p>
+                        <n-input :status="credentialIncomplete && email.length === 0 ? 'error' : 'success'"
+                            type="text" v-model:value="email" placeholder="Email" />
+                    </div>
                     <div class="mb-[11px]">
                         <p class="font-jakarta mb-2 font-light text-[13px] text-white">Password: </p>
                         <n-input :status="credentialIncomplete && password.length === 0 ? 'error' : 'success'"
@@ -70,7 +79,7 @@ watch([username, password, firstName, lastName], () => {
                     <div class="my-6">
                         <n-button @click="handleRegister" block color="#003465">Sign in</n-button>
                     </div>
-                    
+
                     <div class="flex justify-center">
                         <p class="mt-6 font-jakarta font-light text-[13px] text-white">
                             <span>Already have an account?</span>
