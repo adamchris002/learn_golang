@@ -1,7 +1,9 @@
 package database
 
 import (
+	"backend/models"
 	"fmt"
+	"log"
 	"os"
 
 	"gorm.io/driver/postgres"
@@ -22,4 +24,16 @@ func Connect() {
 	fmt.Println("Database connected")
 
 	DB = db
+
+		err = DB.AutoMigrate(
+		&models.User{},
+		&models.Task{},
+		&models.Subtask{},
+	)
+
+	if err != nil {
+		log.Fatal("Failed to migrate database:", err)
+	}
+
+	log.Println("Database connected and migrated successfully.")
 }
