@@ -18,6 +18,13 @@ import (
 
 var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
+type userResponse struct {
+	ID        uint   `json:"id"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
 
 func Register(w http.ResponseWriter, r *http.Request) {
 	//decode request body to user struct
@@ -122,7 +129,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		token,err := GenerateToken(searchUser.ID)
+		token, err := GenerateToken(searchUser.ID)
 
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
@@ -138,8 +145,9 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		json.NewEncoder(w).Encode(map[string]string{
-			"token": token,
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"user":         userResponse{ID: searchUser.ID, Username: searchUser.Username, Email: searchUser.Email, FirstName: searchUser.FirstName, LastName: searchUser.LastName},
+			"token":        token,
 			"messageTitle": "Login Success",
 			"message":      "Login Successful",
 		})
