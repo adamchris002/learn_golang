@@ -5,8 +5,8 @@ export const useAuthStore = defineStore("auth", () => {
   const token = ref<string | null>(localStorage.getItem("token"));
   const user = ref<{
     id: string;
-    firstName: string;
-    lastName: string;
+    first_name: string;
+    last_name: string;
     username: string;
     email: string;
   } | null>(null);
@@ -22,12 +22,13 @@ export const useAuthStore = defineStore("auth", () => {
 
   function setUser(newUser: {
     id: string;
-    firstName: string;
-    lastName: string;
+    first_name: string;
+    last_name: string;
     username: string;
     email: string;
   }) {
     user.value = newUser;
+    localStorage.setItem("user", JSON.stringify(newUser));
   }
 
   function setMessage(err: { status: Number; messageTitle: string; message: string } | null) {
@@ -37,6 +38,7 @@ export const useAuthStore = defineStore("auth", () => {
   function logout() {
     token.value = null;
     user.value = null;
+    localStorage.removeItem("user");
     localStorage.removeItem("token");
   }
 
