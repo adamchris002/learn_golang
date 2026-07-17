@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue"
+import { useAuthStore } from "@/stores/auth"
 
 import loginBackground from "@/assets/images/background.png"
 import facebookLogo from '@/assets/logos/facebook_logo.png'
@@ -11,6 +12,8 @@ import { useItemScale } from "@/composable/pageAdjuster"
 import { signIn } from "@/services/authServices"
 import router from "@/router"
 
+const authStore = useAuthStore()
+
 const username = ref<string>("")
 const password = ref<string>("")
 
@@ -20,10 +23,10 @@ const scale = useItemScale()
 
 function handleSignIn() {
   if (!username.value || !password.value) {
+    authStore.setMessage({ status: 400, messageTitle: 'Login Fail', message: "Please fill in all fields" })
     credentialIncomplete.value = true
   } else {
     const data = { username: username.value, password: password.value }
-
     signIn(data)
   }
 }
