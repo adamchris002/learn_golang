@@ -53,23 +53,25 @@ export type SubTaskResponse = {
 
 export async function getTodaysTasks(userId: number) {
   try {
-    const result = await axios({
-      method: "GET",
-      url: `http://localhost:8080/todaysTasks?userId=${userId}`,
-    });
-    if (result.status === 200) {
-      const data = result.data;
-      //ga perlu pake message lah kalo sukses
-      const messageData = null;
-      return { data, messageData };
-    }
-  } catch (error: any) {
-    const messageData = {
-      status: error.response.status,
-      messageTitle: error.response.data.messageTitle,
-      message: error.response.data.message,
+    const result = await axios.get(
+      `http://localhost:8080/todaysTasks?userId=${userId}`,
+    );
+
+    return {
+      success: true,
+      data: result.data,
+      messageData: null,
     };
-    return { error, messageData };
+  } catch (error: any) {
+    return {
+      success: false,
+      data: null,
+      messageData: {
+        status: error.response.status,
+        messageTitle: error.response.data.messageTitle,
+        message: error.response.data.message,
+      },
+    };
   }
 }
 
@@ -105,6 +107,84 @@ export async function updateTaskCompletion(
       url: `http://localhost:8080/updateTaskCompletion?id=${taskId}&userId=${userId}&data=${data}`,
     });
 
+    const messageData = {
+      status: result.status,
+      messageTitle: result.data.messageTitle,
+      message: result.data.message,
+    };
+    return messageData;
+  } catch (error: any) {
+    return {
+      status: error.response.status,
+      messageTitle: error.response.data.messageTitle,
+      message: error.response.data.message,
+    };
+  }
+}
+
+export async function updateTaskValues(
+  dueDate: string,
+  description: string,
+  subTask: { id: number; title: string; completed: boolean }[],
+  taskId: number,
+  userId: number,
+) {
+  try {
+    const data = {
+      dueDate: dueDate,
+      description: description,
+      subTask: subTask,
+    };
+    const result = await axios({
+      method: "PUT",
+      url: `http://localhost:8080/updateTaskValues?id=${taskId}&userId=${userId}`,
+      data: data,
+    });
+
+    const messageData = {
+      status: result.status,
+      messageTitle: result.data.messageTitle,
+      message: result.data.message,
+    };
+
+    return messageData;
+  } catch (error: any) {
+    return {
+      status: error.response.status,
+      messageTitle: error.response.data.messageTitle,
+      message: error.response.data.message,
+    };
+  }
+}
+
+export async function deleteTask(taskId: number, userId: number) {
+  try {
+    const result = await axios({
+      method: "DELETE",
+      url: `http://localhost:8080/deleteTask?id=${taskId}&userId=${userId}`,
+    });
+
+    const messageData = {
+      status: result.status,
+      messageTitle: result.data.messageTitle,
+      message: result.data.message,
+    };
+    return messageData;
+  } catch (error: any) {
+    return {
+      status: error.response.status,
+      messageTitle: error.response.data.messageTitle,
+      message: error.response.data.message,
+    };
+  }
+}
+
+export async function deleteExistingSubtask(subTaskId: number, taskId: number) {
+  try {
+    const result = await axios({
+      method: "DELETE",
+      url: `http://localhost:8080/deleteSubTask?id=${subTaskId}&taskId=${taskId}`,
+    });
     const messageData = {
       status: result.status,
       messageTitle: result.data.messageTitle,
