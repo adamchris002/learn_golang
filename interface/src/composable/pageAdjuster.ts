@@ -17,7 +17,8 @@ export function useItemScale() {
 
   const scale = computed(() => {
     if (width.value < 1200) return 0.65;
-    if (width.value < 1480) return 0.8;
+    if (width.value < 1480) return 0.7;
+    if (width.value < 1550) return 0.8;
     return 1;
   });
 
