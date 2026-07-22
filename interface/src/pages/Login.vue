@@ -40,8 +40,6 @@ watch([username, password], () => {
     credentialIncomplete.value = false
   }
 })
-// watch((username) , (newVal) => {console.log(newVal)}, {deep: true, immediate: true})
-
 </script>
 <template>
   <div class="h-screen w-screen flex justify-center items-center bg-cover bg-center bg-no-repeat"
