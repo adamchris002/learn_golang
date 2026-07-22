@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -156,6 +157,72 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
+	}
+}
+
+func VerifyTokenAndLogin(w http.ResponseWriter, r *http.Request) {
+	var searchUser models.User
+	authHeader := r.Header.Get("Authorization")
+
+	result := database.DB.Where("username = ?", r.URL.Query().Get("username")).First(&searchUser)
+
+	if result.Error != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Login Fail",
+			"message":      fmt.Sprintf("User with username %s does not exist", searchUser.Username),
+		})
+		return
+	} else {
+
+		if authHeader == "" {
+			http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+			return
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+		claims := jwt.MapClaims{}
+
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method")
+			}
+
+			return jwtSecret, nil
+		})
+
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]any{
+				"messageTitle": "Login Failed",
+				"message":      fmt.Sprintf("Invalid or expired token for user with ID of %v", searchUser.ID),
+			})
+			return
+		}
+
+		if !token.Valid {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]any{
+				"messageTitle": "Login Failed",
+				"message":      fmt.Sprintf("Invalid token for user with ID of %v", searchUser.ID),
+			})
+			return
+		}
+
+		userID := claims["user_id"]
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]any{
+			"messageTitle": "Login Successful",
+			"message":      fmt.Sprintf("Token is still valid for user with ID of %v", userID),
+			"user_id":      userID,
+		})
 	}
 }
 

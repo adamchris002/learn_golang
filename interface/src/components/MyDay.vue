@@ -1,24 +1,35 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue"
-import { getTodaysTasks, postTodaysTask, updateTaskCompletion, type TaskResponse } from "@/services/taskServices"
+import { computed, onMounted, ref, watch } from "vue"
+import { deleteExistingSubtask, deleteTask, getTodaysTasks, postTodaysTask, updateTaskCompletion, updateTaskValues, type TaskResponse } from "@/services/taskServices"
 
+import { useAuthStore } from "@/stores/auth"
 import { useTimeNow } from "@/composable/timeNow"
 import { useItemScale } from "@/composable/pageAdjuster"
 
-import { NInput, NButton, NIcon, NAlert, NCheckbox } from "naive-ui"
+import { NInput, NButton, NIcon, NAlert } from "naive-ui"
 import send from "@/assets/icons/send.svg"
-import dayjs from "dayjs"
+import TaskLists from "./TaskLists.vue"
+import TaskDetail from "./TaskDetail.vue"
+import { sanitizeInput } from "@/composable/sanitizeInput.ts"
 
+let alertTimeout: ReturnType<typeof setTimeout> | null = null
+
+const authStore = useAuthStore()
 const { currentTime } = useTimeNow()
 const scale = useItemScale()
 
 const taskArray = ref<TaskResponse[]>([])
 const taskErrorMessage = ref<{ status: number; messageTitle: string; message: string } | null>(null)
 const textString = ref<string>("")
+const openDetails = ref<boolean>(false)
+const taskInformation = ref<TaskResponse | null>(null)
 
 const refreshTask = ref(false)
 
 const user = JSON.parse(localStorage.getItem("user") || "{}")
+
+const completedTasks = computed(() => { return taskArray.value.filter((item) => item.completed) })
+const incompleteTasks = computed(() => { return taskArray.value.filter((item) => !item.completed) })
 
 function getGreetings() {
     const hour = currentTime.value.hour()
@@ -31,13 +42,42 @@ function getGreetings() {
     }
 }
 
-function setTextInput(value: string) {
+function openTaskInformation(taskItem: TaskResponse) {
+    openDetails.value = true
+    taskInformation.value = taskItem
+}
+
+function closeTaskInformation() {
+    openDetails.value = false
+    taskInformation.value = null
+}
+
+function sanitizeTaskInput() {
     //sanitize input hehehe
-    textString.value = value.trim().replace(/\s+/g, " ");
+    textString.value = sanitizeInput(textString.value)
+}
+
+async function handleDeleteSubtask(subtaskId: number, taskId: number) {
+    taskErrorMessage.value = await deleteExistingSubtask(subtaskId, taskId)
+    refreshTask.value = true
+}
+
+async function handleDeleteTask(id: number) {
+    taskErrorMessage.value = await deleteTask(id, user.id)
+    closeTaskInformation()
+    refreshTask.value = true
+}
+
+async function handleUpdateTaskValues(taskDueDate: string, taskDescription: string, taskSubArray: { id: number, title: string, completed: boolean }[], taskId: number) {
+    taskErrorMessage.value = await updateTaskValues(taskDueDate, taskDescription, taskSubArray, taskId, user.id)
+    refreshTask.value = true
 }
 
 async function handleUpdateTaskCompletion(id: number, data: boolean) {
     taskErrorMessage.value = await updateTaskCompletion(id, user.id, data)
+    if (taskErrorMessage.value.status === 200) {
+        refreshTask.value = true
+    }
 }
 
 async function sendTask() {
@@ -59,14 +99,19 @@ async function sendTask() {
 }
 
 async function callTodaysTasks() {
-    const result = await getTodaysTasks(user.id)
-    if (result) {
+    const result = await getTodaysTasks(user.id);
+
+    if (result.success) {
         taskArray.value = result.data.sort(
-            (a: TaskResponse, b: TaskResponse) => new Date(a.CreatedAt).getTime() - new Date(b.CreatedAt).getTime()
-        )
-        taskErrorMessage.value = result.messageData ?? null
+            (a: TaskResponse, b: TaskResponse) =>
+                new Date(a.CreatedAt).getTime() -
+                new Date(b.CreatedAt).getTime()
+        );
+
+        textString.value = "";
+        refreshTask.value = false;
     } else {
-        taskErrorMessage.value = { status: 400, messageTitle: "Fetch Tasks Failed", message: "Unable to fetch today's tasks." };
+        authStore.setMessage(result.messageData);
     }
 }
 
@@ -76,49 +121,61 @@ onMounted(async () => {
 
 watch((refreshTask), async (newValue) => {
     if (newValue) {
-        await getTodaysTasks(user.id)
+        await callTodaysTasks()
+        if (taskInformation.value && taskArray.value.some(data => data.ID === taskInformation.value?.ID)) {
+            const updatedTaskInformation = taskArray.value.find((data) => data.ID === taskInformation.value?.ID)
+            if (updatedTaskInformation) {
+                taskInformation.value = updatedTaskInformation
+            }
+        }
     }
 }, { immediate: true })
+
+watch(() => taskErrorMessage.value, (message) => {
+    if (alertTimeout) {
+        clearTimeout(alertTimeout)
+    }
+
+    if (message) {
+        alertTimeout = setTimeout(() => {
+            taskErrorMessage.value = null
+        }, 5000) 
+    }
+},
+    { immediate: true })
 </script>
 <template>
     <div class="w-full h-screen flex flex-col items-center py-10 scale-container"
         :style="{ transform: `scale(${scale})`, transformOrigin: 'center' }">
         <div>
-            <h1 class="text-4xl jakarta-font">
+            <h1 class="text-4xl font-jakarta">
                 <span class="text-white">
                     {{ getGreetings() }}, {{ user.first_name }}
                 </span>
                 <span class="text-[#0373fc]">.</span>
             </h1>
-            <h1 class="jakarta-font text-[#8a8888] text-4xl">Remove doubts with action</h1>
+            <h1 class="font-jakarta text-[#8a8888] text-4xl">Remove doubts with action</h1>
             <div
                 class="mt-8 rounded-lg w-200 backdrop-blur-sm inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] px-4 py-2 flex justify-start">
                 <div class="flex flex-col items-center">
-                    <p class="jakarta-font text-base font-semibold text-white">{{
+                    <p class="font-jakarta text-base font-semibold text-white">{{
                         currentTime.format("ddd").toUpperCase() }}</p>
-                    <p class="jakarta-font text-5xl font-bold text-white">{{ currentTime.format("DD") }}</p>
-                    <p class="jakarta-font text-base font-normal text-white">{{ currentTime.format("MMMM") }}</p>
+                    <p class="font-jakarta text-5xl font-bold text-white">{{ currentTime.format("DD") }}</p>
+                    <p class="font-jakarta text-base font-normal text-white">{{ currentTime.format("MMMM") }}</p>
                 </div>
                 <div class="w-full ml-4 flex items-center justify-center">
-                    <h1 class="jakarta-font text-4xl font-bold text-white">What's your tasks today?</h1>
+                    <h1 class="font-jakarta text-4xl font-bold text-white">What's your tasks today?</h1>
                 </div>
             </div>
         </div>
-        <div v-if="taskArray.length > 0 && taskArray" v-for="items in taskArray">
-            <div
-                class="mt-8 rounded-lg w-200 backdrop-blur-sm inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] px-4 py-2 flex items-center">
-                <n-checkbox :checked="items.completed" @update-checked="(value) => handleUpdateTaskCompletion(items.ID, value)" />
-                <div class="cursor-pointer" @click="">
-                    <p class="jakarta-font text-[#8a8888] text-base ml-4">Created at: {{
-                        dayjs(items.CreatedAt).format("DD/MMMM/YYYY HH:mm:ss") }}</p>
-                    <p class="jakarta-font text-white text-xl ml-4">{{ items.title }}</p>
-                </div>
-            </div>
-        </div>
+        <TaskLists title="Completed Tasks" if-empty-string="No completed Tasks yet" :task-array="completedTasks"
+            @toggle="handleUpdateTaskCompletion" @open-task-detail="openTaskInformation" />
+        <TaskLists title="Not Completed Tasks" if-empty-string="No Tasks to complete" :task-array="incompleteTasks"
+            @toggle="handleUpdateTaskCompletion" @open-task-detail="openTaskInformation" />
         <div class="mt-auto w-200 flex">
-            <n-input block round
+            <n-input block round v-model:value="textString" @blur="sanitizeTaskInput"
                 :theme-overrides="{ color: 'backdrop-blur-sm', borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc', colorFocus: 'backdrop-blur-sm', textColor: 'white' }"
-                @update:value="setTextInput" placeholder="What needs to be done?">
+                placeholder="What needs to be done?">
                 <template #suffix>
                     <n-button circle :bordered="false" class="send-btn"
                         :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc' }"
@@ -137,6 +194,9 @@ watch((refreshTask), async (newValue) => {
             </n-alert>
         </div>
     </div>
+    <TaskDetail :open="openDetails" :task="taskInformation" @close-modal="closeTaskInformation"
+        @delete-task="handleDeleteTask" @update-task-datas="handleUpdateTaskValues"
+        @delete-subtask="handleDeleteSubtask" />
 </template>
 <style scoped>
 .scale-container {
