@@ -15,6 +15,7 @@ import thumbtackIcon from "@/assets/icons/thumbtack.svg"
 import { useTimeNow } from "@/composable/timeNow"
 import { useItemScale } from "@/composable/pageAdjuster"
 import { menuItems } from "@/datas/homeItems"
+import { verifyTokenAndLogin } from "@/services/authServices"
 
 const authStore = useAuthStore()
 const scale = useItemScale()
@@ -39,6 +40,7 @@ const isSettingsVisible = computed(() => {
 
 onMounted(() => {
   currentComponent.value = menuItems[0]?.component ?? null
+  verifyTokenAndLogin(user.username)
 })
 
 </script>
