@@ -145,10 +145,12 @@ watch(() => taskErrorMessage.value, (message) => {
     }
 },
     { immediate: true })
+
+    watch(scale, (newValue) => {console.log(newValue)}, {immediate: true})
 </script>
 <template>
     <div class="w-full h-screen flex flex-col items-center py-10 scale-container"
-        :style="{ transform: `scale(${scale})`, transformOrigin: 'center' }">
+        :style="{ transform: `scale(${scale})`, transformOrigin: scale > 0.7 ?  'center' : 'top' }">
         <div>
             <h1 class="text-4xl font-jakarta">
                 <span class="text-white">
@@ -171,9 +173,9 @@ watch(() => taskErrorMessage.value, (message) => {
             </div>
         </div>
         <TaskLists title="Completed Tasks" if-empty-string="No completed Tasks yet" :task-array="completedTasks"
-            @toggle="handleUpdateTaskCompletion" @open-task-detail="openTaskInformation" />
+            @toggle="handleUpdateTaskCompletion" @open-task-detail="openTaskInformation" :scale="scale" />
         <TaskLists title="Not Completed Tasks" if-empty-string="No Tasks to complete" :task-array="incompleteTasks"
-            @toggle="handleUpdateTaskCompletion" @open-task-detail="openTaskInformation" />
+            @toggle="handleUpdateTaskCompletion" @open-task-detail="openTaskInformation" :scale="scale" />
         <div class="mt-auto w-200 flex">
             <n-input block round v-model:value="textString" @blur="sanitizeTaskInput"
                 :theme-overrides="{ color: 'backdrop-blur-sm', borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc', colorFocus: 'backdrop-blur-sm', textColor: 'white' }"
