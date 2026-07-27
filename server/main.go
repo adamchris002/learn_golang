@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"backend/database"
-	"backend/models"
 	"backend/routes"
 	"backend/middleware"
 
@@ -14,24 +13,19 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
+    err := godotenv.Load()
 
-	if err != nil {
-		panic("Cannot load .env")
-	}
+    if err != nil {
+        panic("Cannot load .env")
+    }
 
-	database.Connect()
+    database.Connect()
 
-	database.DB.AutoMigrate(
-		&models.User{},
-	)
-	
+    routes.SetupRoutes()
 
-	routes.SetupRoutes()
-	
-	fmt.Println("Server running on port 8080")
+    fmt.Println("Server running on port 8080")
 
-	handler := middleware.CORS(http.DefaultServeMux)
+    handler := middleware.CORS(http.DefaultServeMux)
 
-	http.ListenAndServe(":8080", handler)
+    http.ListenAndServe(":8080", handler)
 }

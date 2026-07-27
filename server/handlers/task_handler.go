@@ -44,33 +44,18 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func CallTodaysTasks(w http.ResponseWriter, r *http.Request) {
+func CallOneWeekTasks(w http.ResponseWriter, r *http.Request) {
 	var tasks []models.Task
 
 	userID := r.URL.Query().Get("userId")
 
-	now := time.Now()
-
-	startOfDay := time.Date(
-		now.Year(),
-		now.Month(),
-		now.Day(),
-		0, 0, 0, 0,
-		now.Location(),
-	)
-
-	today := time.Now().Format("2006-01-02")
-
-	endOfDay := startOfDay.Add(24 * time.Hour)
-
 	result := database.DB.
-		Preload("Subtasks").
 		Where("tasks.user_id = ?", userID).
 		Where(`
-		(tasks.created_at >= ? AND tasks.created_at < ?)
-		OR
-		(tasks.due_date != '' AND tasks.due_date >= ?)
-	`, startOfDay, endOfDay, today).
+        TO_DATE(tasks.task_start, 'DD/MM/YYYY') >= ?
+        AND
+        TO_DATE(tasks.task_start, 'DD/MM/YYYY') <= ?
+    `, time.Now(), time.Now().AddDate(0, 0, 7)).
 		Find(&tasks)
 
 	if result.Error != nil {
@@ -80,6 +65,32 @@ func CallTodaysTasks(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(tasks)
+}
+
+func CallTodaysTasks(w http.ResponseWriter, r *http.Request) {
+	var tasks []models.Task
+
+	userID := r.URL.Query().Get("userId")
+
+	today := time.Now()
+
+	result := database.DB.
+		Preload("Subtasks").
+		Where("tasks.user_id = ?", userID).
+		Where(`
+			TO_DATE(tasks.task_start, 'DD/MM/YYYY') = ?
+			OR
+			(tasks.due_date != '' AND TO_DATE(tasks.due_date, 'DD/MM/YYYY') >= ?)
+		`, today, today).
+		Find(&tasks)
+
+	if result.Error != nil {
+		http.Error(w, "Error retrieving tasks", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tasks)
 }
 

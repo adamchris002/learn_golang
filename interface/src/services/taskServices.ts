@@ -3,7 +3,8 @@ import axios from "axios";
 type task = {
   title: string;
   description: string;
-  dueDate: string;
+  task_start: string;
+  due_date: string;
   completed: boolean;
 };
 
@@ -15,6 +16,7 @@ export type TaskResponse = {
 
   title: string;
   description: string;
+  task_start: string;
   due_date: string;
   completed: boolean;
 
@@ -50,6 +52,30 @@ export type SubTaskResponse = {
 
   taskId: number;
 };
+
+export async function getOneWeekTasks(userId: number) {
+  try {
+    const result = await axios.get(
+      `http://localhost:8080/oneWeekTasks?userId=${userId}`,
+    );
+
+    return {
+      success: true,
+      data: result.data,
+      messageData: null,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      data: null,
+      messageData: {
+        status: error.response.status,
+        messageTitle: error.response.data.messageTitle,
+        message: error.response.data.message,
+      },
+    };
+  }
+}
 
 export async function getTodaysTasks(userId: number) {
   try {
