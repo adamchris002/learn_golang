@@ -13,12 +13,12 @@ import homeBackground from "@/assets/images/home_background.png"
 import settingIcon from "@/assets/icons/settings.svg"
 import thumbtackIcon from "@/assets/icons/thumbtack.svg"
 import { useTimeNow } from "@/composable/timeNow"
-import { useItemScale } from "@/composable/pageAdjuster"
+import { drawerItemScale } from "@/composable/pageAdjuster"
 import { menuItems } from "@/datas/homeItems"
 import { verifyTokenAndLogin } from "@/services/authServices"
 
 const authStore = useAuthStore()
-const scale = useItemScale()
+const scale = drawerItemScale()
 
 const currentComponent = shallowRef<Component | null>(null);
 
@@ -40,7 +40,9 @@ const isSettingsVisible = computed(() => {
 
 onMounted(() => {
   currentComponent.value = menuItems[0]?.component ?? null
-  verifyTokenAndLogin(user.username)
+  if (authStore.token !== null) {
+    verifyTokenAndLogin(user.username)
+  }
 })
 
 </script>
@@ -72,7 +74,7 @@ onMounted(() => {
             </n-button>
             <div class="w-full ml-4">
               <div class="flex items-center justify-between">
-                <p class="text-white font-jakarta text-lg font-semibold">{{ user.first_name }}</p>
+                <p class="text-white font-jakarta text-lg font-semibold mr-8">{{ user.first_name }}</p>
                 <n-button @click="settingsPinned = !settingsPinned"
                   :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc' }" class="pin-btn" circle>
                   <thumbtackIcon />
@@ -140,6 +142,7 @@ onMounted(() => {
 
 .scale-container {
   transition: transform 300ms ease-in-out;
+  zoom: 100%;
 }
 
 .item-btn {

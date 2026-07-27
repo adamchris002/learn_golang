@@ -11,6 +11,7 @@ import send from "@/assets/icons/send.svg"
 import TaskLists from "./TaskLists.vue"
 import TaskDetail from "./TaskDetail.vue"
 import { sanitizeInput } from "@/composable/sanitizeInput.ts"
+import dayjs from "dayjs"
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null
 
@@ -85,7 +86,8 @@ async function sendTask() {
         const newData = {
             title: textString.value,
             description: '',
-            dueDate: '',
+            task_start: dayjs().format("DD/MM/YYYY"),
+            due_date: '',
             completed: false,
             userId: user.id
         }
@@ -178,7 +180,7 @@ watch(() => taskErrorMessage.value, (message) => {
                 placeholder="What needs to be done?">
                 <template #suffix>
                     <n-button circle :bordered="false" class="send-btn"
-                        :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc' }"
+                        :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc', rippleColor: 'none' }"
                         @click="sendTask">
                         <n-icon>
                             <send />

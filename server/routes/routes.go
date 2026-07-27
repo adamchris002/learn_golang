@@ -15,6 +15,7 @@ func SetupRoutes() {
 	//task related
 	http.HandleFunc("/addTasks", handlers.AddTask)
 	http.HandleFunc("/todaysTasks", handlers.CallTodaysTasks)
+	http.HandleFunc("/oneWeekTasks", handlers.CallOneWeekTasks)
 	http.HandleFunc("/updateTaskCompletion", handlers.UpdateTaskCompletion)
 	http.HandleFunc("/deleteTask", handlers.DeleteTask)
 	http.HandleFunc("/updateTaskValues", handlers.UpdateTaskValues)
