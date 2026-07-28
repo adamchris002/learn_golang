@@ -21,13 +21,13 @@ const credentialIncomplete = ref(false)
 
 const scale = useItemScale()
 
-function handleRegister() {
+async function handleRegister() {
     if (!username.value || !password.value || !firstName.value || !lastName.value || !email.value) {
         authStore.setMessage({ status: 400, messageTitle: 'Register Fail', message: "Please fill in all fields" })
         credentialIncomplete.value = true
     } else {
         const data = { firstName: firstName.value, lastName: lastName.value, username: username.value, email: email.value, password: password.value }
-        register(data)
+        await register(data)
     }
 }
 
@@ -52,24 +52,24 @@ watch([username, password, firstName, lastName], () => {
                     <h1 class="font-jakarta mb-10 text-white text-2xl font-bold">Welcome! This is practice</h1>
                     <h1 class="font-jakarta mb-6 text-white text-2xl font-bold">Register</h1>
                     <div class="mb-4">
-                        <p class="font-jakrta mb-2 font-light text-[13px] text-white">First Name: </p>
+                        <p class="font-jakarta mb-2 font-light text-[13px] text-white">First Name: </p>
                         <n-input :status="credentialIncomplete && firstName.length === 0 ? 'error' : 'success'"
                             type="text" v-model:value="firstName" placeholder="First Name" />
                     </div>
                     <div class="mb-4">
-                        <p class="font-jakrta mb-2 font-light text-[13px] text-white">Last Name: </p>
+                        <p class="font-jakarta mb-2 font-light text-[13px] text-white">Last Name: </p>
                         <n-input :status="credentialIncomplete && lastName.length === 0 ? 'error' : 'success'"
                             type="text" v-model:value="lastName" placeholder="Last Name" />
                     </div>
                     <div class="mb-4">
-                        <p class="font-jakrta mb-2 font-light text-[13px] text-white">Username: </p>
+                        <p class="font-jakarta mb-2 font-light text-[13px] text-white">Username: </p>
                         <n-input :status="credentialIncomplete && username.length === 0 ? 'error' : 'success'"
                             type="text" v-model:value="username" placeholder="Username" />
                     </div>
                     <div class="mb-4">
-                        <p class="font-jakrta mb-2 font-light text-[13px] text-white">Email: </p>
-                        <n-input :status="credentialIncomplete && email.length === 0 ? 'error' : 'success'"
-                            type="text" v-model:value="email" placeholder="Email" />
+                        <p class="font-jakarta mb-2 font-light text-[13px] text-white">Email: </p>
+                        <n-input :status="credentialIncomplete && email.length === 0 ? 'error' : 'success'" type="text"
+                            v-model:value="email" placeholder="Email" />
                     </div>
                     <div class="mb-[11px]">
                         <p class="font-jakarta mb-2 font-light text-[13px] text-white">Password: </p>
@@ -92,8 +92,6 @@ watch([username, password, firstName, lastName], () => {
     </div>
 </template>
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-
 .scale-container {
     transition: transform 300ms ease-in-out;
 }

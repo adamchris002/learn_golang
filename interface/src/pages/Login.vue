@@ -21,13 +21,13 @@ const credentialIncomplete = ref(false)
 
 const scale = useItemScale()
 
-function handleSignIn() {
+async function handleSignIn() {
   if (!username.value || !password.value) {
     authStore.setMessage({ status: 400, messageTitle: 'Login Fail', message: "Please fill in all fields" })
     credentialIncomplete.value = true
   } else {
     const data = { username: username.value, password: password.value }
-    signIn(data)
+    await signIn(data)
   }
 }
 
@@ -51,7 +51,7 @@ watch([username, password], () => {
           <h1 class="font-jakarta mb-10 text-white text-2xl font-bold">Welcome! This is practice</h1>
           <h1 class="font-jakarta mb-6 text-white text-2xl font-bold">Login</h1>
           <div class="mb-4">
-            <p class="font-jakrta mb-2 font-light text-[13px] text-white">Username: </p>
+            <p class="font-jakarta mb-2 font-light text-[13px] text-white">Username: </p>
             <n-input :status="credentialIncomplete && username.length === 0 ? 'error' : 'success'" type="text"
               v-model:value="username" placeholder="Username" />
           </div>
@@ -84,8 +84,6 @@ watch([username, password], () => {
   </div>
 </template>
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-
 .scale-container {
   transition: transform 300ms ease-in-out;
 }
