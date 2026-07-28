@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { NIcon, NInput, NButton, NCheckbox } from 'naive-ui';
 import dayjs from 'dayjs';
 
 import { useItemScale } from '@/composable/pageAdjuster';
-import { getOneWeekTasks, postTodaysTask, updateTaskCompletion, type TaskResponse } from '@/services/taskServices';
+import { postTodaysTask, updateTaskCompletion, type TaskResponse } from '@/services/taskServices';
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 
 import send from "@/assets/icons/send.svg"
 import calendarIcon from '@/assets/icons/calendar.svg'
+import { sanitizeInput } from '@/composable/sanitizeInput';
 
 dayjs.extend(customParseFormat)
 
@@ -18,31 +19,29 @@ type dayTemplate = {
     taskDatas: TaskResponse[]
 }
 
-const authStore = useAuthStore()
-const scale = useItemScale()
+const props = defineProps<{ nextSevenDaysTaskArray: TaskResponse[] }>()
+const emits = defineEmits(['requestCallNextSevenDays'])
 
+const scale = useItemScale()
 const user = JSON.parse(localStorage.getItem("user") || "{}")
 
-const taskArray = ref<TaskResponse[]>([])
 const taskInputArray = ref<string[]>([])
 
-const refreshTask = ref<boolean>(false)
-const days = ref<dayTemplate[]>([])
 const taskErrorMessage = ref<{ status: number; messageTitle: string; message: string } | null>(null)
+const days = computed<dayTemplate[]>(() => {
+    const today = dayjs()
 
-function showDays() {
-    days.value = []
-    let today = dayjs()
-
-    for (let i = 0; i < 7; i++) {
+    return Array.from({ length: 7 }, (_, i) => {
         const day = today.add(i, "day")
-        const data = {
+
+        return {
             day: day.format("DD/MM/YYYY"),
-            taskDatas: taskArray.value.filter((data) => data.task_start === day.format("DD/MM/YYYY"))
+            taskDatas: props.nextSevenDaysTaskArray.filter(
+                (data) => data.task_start === day.format("DD/MM/YYYY")
+            ),
         }
-        days.value.push(data)
-    }
-}
+    })
+})
 
 function todayOrTomorrowLabel(value: string) {
     const dateValue = dayjs(value, "DD/MM/YYYY").format('dddd')
@@ -55,6 +54,14 @@ function todayOrTomorrowLabel(value: string) {
     }
 }
 
+function sanitizeTextInput(index: number) {
+    const textInput = taskInputArray.value[index]
+    if (textInput) {
+        const sanitizedText = sanitizeInput(textInput)
+        taskInputArray.value[index] = sanitizedText
+    }
+}
+
 function initializeTaskInputArray() {
     for (let i = 0; i < 7; i++) {
         taskInputArray.value.push("")
@@ -62,7 +69,9 @@ function initializeTaskInputArray() {
 }
 
 async function addNewTask(index: number) {
+    sanitizeTextInput(index);
     const textString = taskInputArray.value[index]
+
 
     const selectedDay = days.value[index]?.day
 
@@ -81,7 +90,7 @@ async function addNewTask(index: number) {
         }
         taskErrorMessage.value = await postTodaysTask(newData)
         if (taskErrorMessage.value.status === 200) {
-            refreshTask.value = true
+            emits('requestCallNextSevenDays')
         }
     }
     taskInputArray.value[index] = ""
@@ -90,38 +99,12 @@ async function addNewTask(index: number) {
 async function updateTaskCheckbox(id: number, data: boolean) {
     taskErrorMessage.value = await updateTaskCompletion(id, user.id, data)
     if (taskErrorMessage.value.status === 200) {
-        refreshTask.value = true
+        emits('requestCallNextSevenDays')
     }
 }
 
-async function callOneWeekTask() {
-    const result = await getOneWeekTasks(user.id);
-
-    if (result.success) {
-        taskArray.value = result.data.sort(
-            (a: TaskResponse, b: TaskResponse) =>
-                new Date(a.CreatedAt).getTime() -
-                new Date(b.CreatedAt).getTime()
-        );
-
-        refreshTask.value = false;
-    } else {
-        authStore.setMessage(result.messageData);
-    }
-}
-
-watch((refreshTask), async (newValue) => {
-    if (newValue) {
-        await callOneWeekTask()
-        showDays()
-    }
-}, { immediate: true })
-
-watch((days), (newValue) => { console.log(newValue) }, { immediate: true })
-
-onMounted(async () => {
-    await callOneWeekTask()
-    showDays()
+onMounted(() => {
+    emits('requestCallNextSevenDays')
     initializeTaskInputArray()
 })
 </script>
@@ -162,7 +145,7 @@ onMounted(async () => {
                         </div>
                     </div>
                 </div>
-                <n-input v-model:value="taskInputArray[index]" block type="textarea" :resizable="false"
+                <n-input block v-model:value="taskInputArray[index]" @blur="sanitizeTextInput(index)" type="textarea" :resizable="false"
                     placeholder="+ Add Task"
                     :theme-overrides="{ color: 'backdrop-blur-sm', borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc', colorFocus: 'backdrop-blur-sm', textColor: 'white' }">
                     <template #suffix>

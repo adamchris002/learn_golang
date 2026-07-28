@@ -16,6 +16,9 @@ import { useTimeNow } from "@/composable/timeNow"
 import { drawerItemScale } from "@/composable/pageAdjuster"
 import { menuItems } from "@/datas/homeItems"
 import { verifyTokenAndLogin } from "@/services/authServices"
+import { getOneWeekTasks, getTodaysTasks, type TaskResponse } from "@/services/taskServices"
+import MyDay from "@/components/MyDay.vue"
+import Next7Days from "@/components/Next7Days.vue"
 
 const authStore = useAuthStore()
 const scale = drawerItemScale()
@@ -28,6 +31,27 @@ const settingsPinned = ref(true)
 const user = JSON.parse(localStorage.getItem("user") || "{}")
 const { currentTime } = useTimeNow()
 
+const todayTaskArray = ref<TaskResponse[]>([])
+const next7DaysTaskArray = ref<TaskResponse[]>([])
+
+const componentProps = computed(() => {
+  switch (currentComponent.value) {
+    case MyDay:
+      return {
+        todaysTaskArray: todayTaskArray.value,
+        onRequestCallTodaysTask: callTodaysTasks,
+      }
+
+    case Next7Days:
+      return {
+        nextSevenDaysTaskArray: next7DaysTaskArray.value,
+        onRequestCallNextSevenDays: callOneWeekTask,
+      }
+
+    default:
+      return {}
+  }
+})
 
 function handleLogout() {
   authStore.logout()
@@ -38,15 +62,44 @@ const isSettingsVisible = computed(() => {
   return showSettings.value || settingsPinned.value
 })
 
-onMounted(() => {
+async function callTodaysTasks() {
+  const result = await getTodaysTasks(user.id);
+
+  if (result.success) {
+    todayTaskArray.value = result.data.sort(
+      (a: TaskResponse, b: TaskResponse) =>
+        new Date(a.CreatedAt).getTime() -
+        new Date(b.CreatedAt).getTime()
+    );
+  } else {
+    authStore.setMessage(result.messageData);
+  }
+}
+
+async function callOneWeekTask() {
+  const result = await getOneWeekTasks(user.id);
+
+  if (result.success) {
+    next7DaysTaskArray.value = result.data.sort(
+      (a: TaskResponse, b: TaskResponse) =>
+        new Date(a.CreatedAt).getTime() -
+        new Date(b.CreatedAt).getTime()
+    );
+  } else {
+    authStore.setMessage(result.messageData);
+  }
+}
+
+onMounted(async () => {
   currentComponent.value = menuItems[0]?.component ?? null
   if (authStore.token !== null) {
-    verifyTokenAndLogin(user.username)
+    await verifyTokenAndLogin(user.username)
   }
+  await callTodaysTasks()
+  await callOneWeekTask()
 })
 
 </script>
-
 <template>
   <div class="flex justify-start w-screen h-screen">
     <div class="absolute inset-0 bg-no-repeat pointer-events-none" :style="{
@@ -57,7 +110,8 @@ onMounted(() => {
     <div
       :class="[`${isSettingsVisible ? 'w-[15%]' : 'w-[5%]'} ${isSettingsVisible ? 'bg-[#0d0d0d]' : 'bg-[#1c1c1c]'}  py-5 px-5`]"
       @mouseenter="showSettings = true" @mouseleave="showSettings = false">
-      <n-button v-if="!isSettingsVisible" :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc' }" class="setting-btn"
+      <n-button v-if="!isSettingsVisible"
+        :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc' }" class="setting-btn"
         circle>
         <n-icon>
           <settingIcon />
@@ -67,7 +121,8 @@ onMounted(() => {
         class="scale-container flex flex-col justify-between h-full">
         <div>
           <div class="flex justify-between ">
-            <n-button :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc', }" class="setting-btn" circle>
+            <n-button :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc', }"
+              class="setting-btn" circle>
               <n-icon>
                 <settingIcon />
               </n-icon>
@@ -76,7 +131,8 @@ onMounted(() => {
               <div class="flex items-center justify-between">
                 <p class="text-white font-jakarta text-lg font-semibold mr-8">{{ user.first_name }}</p>
                 <n-button @click="settingsPinned = !settingsPinned"
-                  :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc' }" class="pin-btn" circle>
+                  :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc' }"
+                  class="pin-btn" circle>
                   <thumbtackIcon />
                 </n-button>
               </div>
@@ -104,7 +160,7 @@ onMounted(() => {
     </div>
 
     <div :class="[`${isSettingsVisible ? 'w-[85%]' : 'w-[95%]'} bg-[#1c1c1c]`]">
-      <component :is="currentComponent" />
+      <component :is="currentComponent" v-bind="componentProps" />
     </div>
   </div>
 
@@ -121,7 +177,7 @@ onMounted(() => {
 }
 
 .setting-btn:focus {
-    color: #0373fc;
+  color: #0373fc;
   border-color: #0373fc;
 }
 
