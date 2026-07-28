@@ -2,10 +2,9 @@ import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
 import router from "@/router";
 
-const authStore = useAuthStore();
-const token = localStorage.getItem("token");
+export async function signIn(data: { username: string; password: string }) {
+  const authStore = useAuthStore();
 
-export function signIn(data: { username: string; password: string }) {
   axios({
     method: "POST",
     url: "http://localhost:8080/login",
@@ -34,12 +33,14 @@ export function signIn(data: { username: string; password: string }) {
     });
 }
 
-export function register(data: {
+export async function register(data: {
   firstName: string;
   lastName: string;
   username: string;
   password: string;
 }) {
+  const authStore = useAuthStore();
+
   axios({
     method: "POST",
     url: "http://localhost:8080/register",
@@ -66,7 +67,10 @@ export function register(data: {
     });
 }
 
-export function verifyTokenAndLogin(username: string) {
+export async function verifyTokenAndLogin(username: string) {
+  const authStore = useAuthStore();
+  const token = localStorage.getItem("token");
+
   axios({
     method: "POST",
     url: `http://localhost:8080/verifyTokenAndLogin?username=${username}`,
