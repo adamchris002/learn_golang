@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, watch } from "vue"
 import { deleteExistingSubtask, deleteTask, getTodaysTasks, postTodaysTask, updateTaskCompletion, updateTaskValues, type TaskResponse } from "@/services/taskServices"
 
-import { useAuthStore } from "@/stores/auth"
 import { useTimeNow } from "@/composable/timeNow"
 import { useItemScale } from "@/composable/pageAdjuster"
 
@@ -13,24 +12,23 @@ import TaskDetail from "./TaskDetail.vue"
 import { sanitizeInput } from "@/composable/sanitizeInput.ts"
 import dayjs from "dayjs"
 
+const props = defineProps<{ todaysTaskArray: TaskResponse[] }>()
+const emits = defineEmits(['requestCallTodaysTask'])
+
 let alertTimeout: ReturnType<typeof setTimeout> | null = null
 
-const authStore = useAuthStore()
 const { currentTime } = useTimeNow()
 const scale = useItemScale()
 
-const taskArray = ref<TaskResponse[]>([])
 const taskErrorMessage = ref<{ status: number; messageTitle: string; message: string } | null>(null)
 const textString = ref<string>("")
 const openDetails = ref<boolean>(false)
 const taskInformation = ref<TaskResponse | null>(null)
 
-const refreshTask = ref(false)
-
 const user = JSON.parse(localStorage.getItem("user") || "{}")
 
-const completedTasks = computed(() => { return taskArray.value.filter((item) => item.completed) })
-const incompleteTasks = computed(() => { return taskArray.value.filter((item) => !item.completed) })
+const completedTasks = computed(() => { return props.todaysTaskArray.filter((item) => item.completed) })
+const incompleteTasks = computed(() => { return props.todaysTaskArray.filter((item) => !item.completed) })
 
 function getGreetings() {
     const hour = currentTime.value.hour()
@@ -60,28 +58,29 @@ function sanitizeTaskInput() {
 
 async function handleDeleteSubtask(subtaskId: number, taskId: number) {
     taskErrorMessage.value = await deleteExistingSubtask(subtaskId, taskId)
-    refreshTask.value = true
+    emits('requestCallTodaysTask')
 }
 
 async function handleDeleteTask(id: number) {
     taskErrorMessage.value = await deleteTask(id, user.id)
     closeTaskInformation()
-    refreshTask.value = true
+    emits('requestCallTodaysTask')
 }
 
 async function handleUpdateTaskValues(taskDueDate: string, taskDescription: string, taskSubArray: { id: number, title: string, completed: boolean }[], taskId: number) {
     taskErrorMessage.value = await updateTaskValues(taskDueDate, taskDescription, taskSubArray, taskId, user.id)
-    refreshTask.value = true
+    emits('requestCallTodaysTask')
 }
 
 async function handleUpdateTaskCompletion(id: number, data: boolean) {
     taskErrorMessage.value = await updateTaskCompletion(id, user.id, data)
     if (taskErrorMessage.value.status === 200) {
-        refreshTask.value = true
+        emits('requestCallTodaysTask')
     }
 }
 
 async function sendTask() {
+    sanitizeTaskInput()
     if (textString.value.length > 0) {
         const newData = {
             title: textString.value,
@@ -93,45 +92,17 @@ async function sendTask() {
         }
         taskErrorMessage.value = await postTodaysTask(newData)
         if (taskErrorMessage.value.status === 200) {
-            refreshTask.value = true
+            emits('requestCallTodaysTask')
+            textString.value = ""
         }
     } else {
         taskErrorMessage.value = { status: 400, messageTitle: "Save Task Failed", message: "Task cannot be empty." };
     }
 }
 
-async function callTodaysTasks() {
-    const result = await getTodaysTasks(user.id);
-
-    if (result.success) {
-        taskArray.value = result.data.sort(
-            (a: TaskResponse, b: TaskResponse) =>
-                new Date(a.CreatedAt).getTime() -
-                new Date(b.CreatedAt).getTime()
-        );
-
-        textString.value = "";
-        refreshTask.value = false;
-    } else {
-        authStore.setMessage(result.messageData);
-    }
-}
-
-onMounted(async () => {
-    await callTodaysTasks()
+onMounted(() => {
+    emits('requestCallTodaysTask')
 })
-
-watch((refreshTask), async (newValue) => {
-    if (newValue) {
-        await callTodaysTasks()
-        if (taskInformation.value && taskArray.value.some(data => data.ID === taskInformation.value?.ID)) {
-            const updatedTaskInformation = taskArray.value.find((data) => data.ID === taskInformation.value?.ID)
-            if (updatedTaskInformation) {
-                taskInformation.value = updatedTaskInformation
-            }
-        }
-    }
-}, { immediate: true })
 
 watch(() => taskErrorMessage.value, (message) => {
     if (alertTimeout) {
@@ -141,16 +112,15 @@ watch(() => taskErrorMessage.value, (message) => {
     if (message) {
         alertTimeout = setTimeout(() => {
             taskErrorMessage.value = null
-        }, 5000) 
+        }, 5000)
     }
 },
     { immediate: true })
 
-    watch(scale, (newValue) => {console.log(newValue)}, {immediate: true})
 </script>
 <template>
     <div class="w-full h-screen flex flex-col items-center py-10 scale-container"
-        :style="{ transform: `scale(${scale})`, transformOrigin: scale > 0.7 ?  'center' : 'top' }">
+        :style="{ transform: `scale(${scale})`, transformOrigin: scale > 0.7 ? 'center' : 'top' }">
         <div>
             <h1 class="text-4xl font-jakarta">
                 <span class="text-white">
