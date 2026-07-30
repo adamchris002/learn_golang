@@ -8,7 +8,7 @@ import { NModal, NCard, NButton, NIcon, NDatePicker, darkTheme, NConfigProvider,
 import { sanitizeInput } from '@/composable/sanitizeInput';
 
 const props = defineProps<{ open: boolean, task: TaskResponse | null }>()
-const emits = defineEmits(["closeModal", "updateTask", "deleteTask", "updateTaskDatas", "deleteSubtask"])
+const emits = defineEmits(["closeModal", "deleteTask", "updateTaskDatas", "deleteSubtask"])
 
 type subtask = {
     id: number;
