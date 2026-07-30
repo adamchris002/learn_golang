@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { useAuthStore } from '@/stores/auth';
-import { NIcon, NInput, NButton, NCheckbox } from 'naive-ui';
+import { computed, onMounted, ref, watch } from 'vue';
+import { NIcon, NInput, NButton, NCheckbox, NAlert } from 'naive-ui';
+import TaskDetail from './TaskDetail.vue';
 import dayjs from 'dayjs';
 
 import { useItemScale } from '@/composable/pageAdjuster';
-import { postTodaysTask, updateTaskCompletion, type TaskResponse } from '@/services/taskServices';
+import { deleteExistingSubtask, deleteTask, postTodaysTask, updateTaskCompletion, updateTaskValues, type TaskResponse } from '@/services/taskServices';
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 
 import send from "@/assets/icons/send.svg"
@@ -22,10 +22,13 @@ type dayTemplate = {
 const props = defineProps<{ nextSevenDaysTaskArray: TaskResponse[] }>()
 const emits = defineEmits(['requestCallNextSevenDays'])
 
+const openDetails = ref<boolean>(false)
 const scale = useItemScale()
 const user = JSON.parse(localStorage.getItem("user") || "{}")
+let alertTimeout: ReturnType<typeof setTimeout> | null = null
 
 const taskInputArray = ref<string[]>([])
+const selectedTaskInformation = ref<TaskResponse | null>(null)
 
 const taskErrorMessage = ref<{ status: number; messageTitle: string; message: string } | null>(null)
 const days = computed<dayTemplate[]>(() => {
@@ -42,6 +45,16 @@ const days = computed<dayTemplate[]>(() => {
         }
     })
 })
+
+function setSelectedTaskInformation(data: any) {
+    openDetails.value = true
+    selectedTaskInformation.value = data
+}
+
+function closeSelectedTaskInformation() {
+    openDetails.value = false
+    selectedTaskInformation.value = null
+}
 
 function todayOrTomorrowLabel(value: string) {
     const dateValue = dayjs(value, "DD/MM/YYYY").format('dddd')
@@ -96,6 +109,28 @@ async function addNewTask(index: number) {
     taskInputArray.value[index] = ""
 }
 
+async function handleDeleteTasks(taskId: number) {
+    taskErrorMessage.value = await deleteTask(taskId, user.id)
+    if (taskErrorMessage.value.status === 200) {
+        openDetails.value = false
+        emits('requestCallNextSevenDays')
+    }
+}
+
+async function handleUpdateTasks(dueDate: string, description: string, subtasks: { id: number, title: string, completed: boolean }[], taskId: number) {
+    taskErrorMessage.value = await updateTaskValues(dueDate, description, subtasks, taskId, user.id)
+    if (taskErrorMessage.value.status === 200) {
+        emits('requestCallNextSevenDays')
+    }
+}
+
+async function handleDeleteSubstasks(subtaskId: number, taskId: number) {
+    taskErrorMessage.value = await deleteExistingSubtask(subtaskId, taskId)
+    if (taskErrorMessage.value.status === 200) {
+        emits('requestCallNextSevenDays')
+    }
+}
+
 async function updateTaskCheckbox(id: number, data: boolean) {
     taskErrorMessage.value = await updateTaskCompletion(id, user.id, data)
     if (taskErrorMessage.value.status === 200) {
@@ -107,6 +142,28 @@ onMounted(() => {
     emits('requestCallNextSevenDays')
     initializeTaskInputArray()
 })
+
+watch(() => taskErrorMessage.value, (message) => {
+    if (alertTimeout) {
+        clearTimeout(alertTimeout)
+    }
+
+    if (message) {
+        alertTimeout = setTimeout(() => {
+            taskErrorMessage.value = null
+        }, 5000)
+    }
+},
+    { immediate: true })
+
+watch(() => props.nextSevenDaysTaskArray, (newValue) => {
+    if (selectedTaskInformation.value !== null && newValue.some(data => data.ID === selectedTaskInformation.value?.ID)) {
+        const getSelectedTaskInformation = newValue.find(data => data.ID === selectedTaskInformation.value?.ID)
+        if (getSelectedTaskInformation) {
+            selectedTaskInformation.value = getSelectedTaskInformation
+        }
+    }
+}, { immediate: true, deep: true })
 </script>
 <template>
     <div class="relative z-10 py-8 px-4 w-full h-screen overflow-x-auto custom-scroll">
@@ -134,7 +191,8 @@ onMounted(() => {
                 <div class="my-4 overflow-y-auto max-h-[600px] custom-scroll">
                     <div v-if="value.taskDatas.length > 0" v-for="(items, childIndex) in value.taskDatas"
                         :key="childIndex" :class="[childIndex > 0 ? 'mt-2' : '']">
-                        <div class="flex justify-start items-center cursor-pointer">
+                        <div @click="setSelectedTaskInformation(value.taskDatas[childIndex])"
+                            class="flex justify-start items-center cursor-pointer">
                             <n-checkbox :checked="items.completed"
                                 @update-checked="(value: boolean) => updateTaskCheckbox(items.ID, value)" />
                             <div class="ml-2 p-2 bg-[#262626] rounded-md">
@@ -145,8 +203,8 @@ onMounted(() => {
                         </div>
                     </div>
                 </div>
-                <n-input block v-model:value="taskInputArray[index]" @blur="sanitizeTextInput(index)" type="textarea" :resizable="false"
-                    placeholder="+ Add Task"
+                <n-input block v-model:value="taskInputArray[index]" @blur="sanitizeTextInput(index)" type="textarea"
+                    :resizable="false" placeholder="+ Add Task"
                     :theme-overrides="{ color: 'backdrop-blur-sm', borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc', colorFocus: 'backdrop-blur-sm', textColor: 'white' }">
                     <template #suffix>
                         <n-button :bordered="false" @click="addNewTask(index)"
@@ -159,9 +217,17 @@ onMounted(() => {
                     </template>
                 </n-input>
             </div>
-            <!-- additional div for space at end -->
+        </div>
+        <div class="absolute top-2 right-2 z-9999">
+            <n-alert v-if="taskErrorMessage" :title="taskErrorMessage.messageTitle"
+                :type="taskErrorMessage.status === 200 ? 'success' : 'error'" closable @close="taskErrorMessage = null">
+                {{ taskErrorMessage.message }}
+            </n-alert>
         </div>
     </div>
+    <TaskDetail :open="openDetails" :task="selectedTaskInformation" @close-modal="closeSelectedTaskInformation"
+        @delete-task="handleDeleteTasks" @update-task-datas="handleUpdateTasks"
+        @delete-subtask="handleDeleteSubstasks" />
 </template>
 <style scoped>
 .scale-container {
