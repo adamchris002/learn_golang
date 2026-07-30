@@ -50,6 +50,7 @@ func CallOneWeekTasks(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("userId")
 
 	result := database.DB.
+		Preload("Subtasks").
 		Where("tasks.user_id = ?", userID).
 		Where(`
         TO_DATE(tasks.task_start, 'DD/MM/YYYY') >= ?
