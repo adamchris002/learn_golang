@@ -117,6 +117,15 @@ watch(() => taskErrorMessage.value, (message) => {
 },
     { immediate: true })
 
+watch(() => props.todaysTaskArray, (newValue) => {
+    if (taskInformation.value !== null && newValue.some(data => data.ID === taskInformation.value?.ID)) {
+        const getSelectedTaskInformation = newValue.find(data => data.ID === taskInformation.value?.ID)
+        if (getSelectedTaskInformation) {
+            taskInformation.value = getSelectedTaskInformation
+        }
+    }
+}, { immediate: true, deep: true })
+
 </script>
 <template>
     <div class="w-full h-screen flex flex-col items-center py-10 scale-container"
