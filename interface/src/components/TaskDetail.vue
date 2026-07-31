@@ -145,7 +145,8 @@ watch(
                         itemTextColor: '#fff'
                     }
                 }">
-                    <n-date-picker :is-date-disabled="disablePreviousDate" v-model:formatted-value="taskDueDate"
+                    <n-date-picker :input-props="{ id: 'my-custom-datepicker-id', name: 'myCustomDatePickerId' }"
+                        :is-date-disabled="disablePreviousDate" v-model:formatted-value="taskDueDate"
                         value-format="dd/MM/yyyy"
                         :status="(taskDueDate?.length === 0 || taskDueDate === null) && someAreaMissing ? 'error' : 'success'" />
                 </n-config-provider>
@@ -157,7 +158,10 @@ watch(
                         itemTextColor: '#fff'
                     }
                 }">
-                    <n-input type="textarea" v-model:value="taskDescription" @blur="sanitizeDescription"
+                    <n-input :input-props="{
+                        id: 'edit-task-description',
+                        name: 'editTaskDescription'
+                    }" type="textarea" v-model:value="taskDescription" @blur="sanitizeDescription"
                         :status="taskDescription.length === 0 && someAreaMissing ? 'error' : 'success'" />
                 </n-config-provider>
             </div>
@@ -179,7 +183,10 @@ watch(
                     }">
                         <div class="flex justify-start items-center">
                             <n-checkbox v-model:checked="items.completed" class="mr-4" />
-                            <n-input v-model:value="items.title" class="mr-4"
+                            <n-input :input-props="{
+                                id: `subtask-title-${index}`,
+                                name: 'subtaskTitle'
+                            }" v-model:value="items.title" class="mr-4"
                                 :status="items.title.length === 0 && someAreaMissing ? 'error' : 'success'" />
                             <n-button circle ghost type="error" class="!mr-4" @click="deleteSubtasks(items.id, index)">
                                 <n-icon>

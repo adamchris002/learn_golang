@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue"
-import { deleteExistingSubtask, deleteTask, getTodaysTasks, postTodaysTask, updateTaskCompletion, updateTaskValues, type TaskResponse } from "@/services/taskServices"
+import { deleteExistingSubtask, deleteTask, postTodaysTask, updateTaskCompletion, updateTaskValues, type TaskResponse } from "@/services/taskServices"
+import dayjs from "dayjs"
 
 import { useTimeNow } from "@/composable/timeNow"
 import { useItemScale } from "@/composable/pageAdjuster"
+import { sanitizeInput } from "@/composable/sanitizeInput.ts"
 
+import { VueDraggable } from "vue-draggable-plus"
 import { NInput, NButton, NIcon, NAlert } from "naive-ui"
 import send from "@/assets/icons/send.svg"
 import TaskLists from "./TaskLists.vue"
 import TaskDetail from "./TaskDetail.vue"
-import { sanitizeInput } from "@/composable/sanitizeInput.ts"
-import dayjs from "dayjs"
 
 const props = defineProps<{ todaysTaskArray: TaskResponse[] }>()
 const emits = defineEmits(['requestCallTodaysTask'])
@@ -27,8 +28,11 @@ const taskInformation = ref<TaskResponse | null>(null)
 
 const user = JSON.parse(localStorage.getItem("user") || "{}")
 
-const completedTasks = computed(() => { return props.todaysTaskArray.filter((item) => item.completed) })
-const incompleteTasks = computed(() => { return props.todaysTaskArray.filter((item) => !item.completed) })
+// const completedTasks = computed(() => { return props.todaysTaskArray.filter((item) => item.completed) })
+// const incompleteTasks = computed(() => { return props.todaysTaskArray.filter((item) => !item.completed) })
+
+const completedTasks = ref<TaskResponse[] | null>(null)
+const incompleteTasks = ref<TaskResponse[] | null>(null)
 
 function getGreetings() {
     const hour = currentTime.value.hour()
@@ -118,6 +122,9 @@ watch(() => taskErrorMessage.value, (message) => {
     { immediate: true })
 
 watch(() => props.todaysTaskArray, (newValue) => {
+    completedTasks.value = newValue.filter(data => data.completed)
+    incompleteTasks.value = newValue.filter(data => !data.completed)
+
     if (taskInformation.value !== null && newValue.some(data => data.ID === taskInformation.value?.ID)) {
         const getSelectedTaskInformation = newValue.find(data => data.ID === taskInformation.value?.ID)
         if (getSelectedTaskInformation) {
@@ -129,7 +136,7 @@ watch(() => props.todaysTaskArray, (newValue) => {
 </script>
 <template>
     <div class="w-full h-screen flex flex-col items-center py-10 scale-container"
-        :style="{ transform: `scale(${scale})`, transformOrigin: scale > 0.7 ? 'center' : 'top' }">
+        :style="{ transform: `scale(${scale})`, transformOrigin: scale > 0.7 ? 'center' : 'top', zoom: scale < 0.7 ? '200%' : scale < 0.8 ? '130%' : '' }">
         <div>
             <h1 class="text-4xl font-jakarta">
                 <span class="text-white">
@@ -151,12 +158,13 @@ watch(() => props.todaysTaskArray, (newValue) => {
                 </div>
             </div>
         </div>
-        <TaskLists title="Completed Tasks" if-empty-string="No completed Tasks yet" :task-array="completedTasks"
-            @toggle="handleUpdateTaskCompletion" @open-task-detail="openTaskInformation" :scale="scale" />
-        <TaskLists title="Not Completed Tasks" if-empty-string="No Tasks to complete" :task-array="incompleteTasks"
-            @toggle="handleUpdateTaskCompletion" @open-task-detail="openTaskInformation" :scale="scale" />
+        <TaskLists if-empty-string="No completed Tasks yet" :task-array="props.todaysTaskArray"
+            @toggle="handleUpdateTaskCompletion" @open-task-detail="openTaskInformation" />
         <div class="mt-auto w-200 flex">
-            <n-input block round v-model:value="textString" @blur="sanitizeTaskInput"
+            <n-input :input-props="{
+                id: 'task-title-my-day',
+                name: 'taskTitleMyDay'
+            }" block round v-model:value="textString" @blur="sanitizeTaskInput"
                 :theme-overrides="{ color: 'backdrop-blur-sm', borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc', colorFocus: 'backdrop-blur-sm', textColor: 'white' }"
                 placeholder="What needs to be done?">
                 <template #suffix>

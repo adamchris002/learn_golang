@@ -5,12 +5,13 @@ import TaskDetail from './TaskDetail.vue';
 import dayjs from 'dayjs';
 
 import { useItemScale } from '@/composable/pageAdjuster';
-import { deleteExistingSubtask, deleteTask, postTodaysTask, updateTaskCompletion, updateTaskValues, type TaskResponse } from '@/services/taskServices';
+import { changeTaskStartDate, deleteExistingSubtask, deleteTask, postTodaysTask, updateTaskCompletion, updateTaskValues, type TaskResponse } from '@/services/taskServices';
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 
 import send from "@/assets/icons/send.svg"
 import calendarIcon from '@/assets/icons/calendar.svg'
 import { sanitizeInput } from '@/composable/sanitizeInput';
+import { VueDraggable, type DraggableEvent, type MoveEvent } from 'vue-draggable-plus';
 
 dayjs.extend(customParseFormat)
 
@@ -81,6 +82,33 @@ function initializeTaskInputArray() {
     }
 }
 
+function checkIfUpdateStartDatePossible(event: MoveEvent) {
+    const taskId = Number(event.dragged.dataset.taskId)
+    const targetDay = event.to.dataset.day
+
+    let selectedData: TaskResponse | undefined
+    for (let i = 0; i < days.value.length; i++) {
+        selectedData = days.value[i]?.taskDatas.find(data => data.ID === taskId)
+        if (selectedData) break
+    }
+
+    if (!selectedData) return false
+
+
+    const selectedDate = dayjs(targetDay, "DD/MM/YYYY")
+    const taskDueDate = dayjs(selectedData.due_date, "DD/MM/YYYY")
+
+    if (selectedDate.isAfter(taskDueDate) && selectedData.due_date) {
+        taskErrorMessage.value = {
+            message: 'Cannot change task if pass due date',
+            messageTitle: 'Edit Start Date Failed',
+            status: 400
+        }
+        return false
+    }
+    return true
+}
+
 async function addNewTask(index: number) {
     sanitizeTextInput(index);
     const textString = taskInputArray.value[index]
@@ -107,6 +135,14 @@ async function addNewTask(index: number) {
         }
     }
     taskInputArray.value[index] = ""
+}
+
+async function updateStartDate(event: DraggableEvent<TaskResponse>, day: string) {
+    const taskId = event.data.ID
+    taskErrorMessage.value = await changeTaskStartDate(taskId, user.id, day)
+    if (taskErrorMessage.value.status === 200) {
+        emits('requestCallNextSevenDays')
+    }
 }
 
 async function handleDeleteTasks(taskId: number) {
@@ -188,22 +224,29 @@ watch(() => props.nextSevenDaysTaskArray, (newValue) => {
                         {{
                             dayjs(value.day, "DD/MM/YYYY").format('dddd') }}</p>
                 </div>
-                <div class="my-4 overflow-y-auto max-h-[600px] custom-scroll">
-                    <div v-if="value.taskDatas.length > 0" v-for="(items, childIndex) in value.taskDatas"
-                        :key="childIndex" :class="[childIndex > 0 ? 'mt-2' : '']">
-                        <div @click="setSelectedTaskInformation(value.taskDatas[childIndex])"
-                            class="flex justify-start items-center cursor-pointer">
-                            <n-checkbox :checked="items.completed"
-                                @update-checked="(value: boolean) => updateTaskCheckbox(items.ID, value)" />
-                            <div class="ml-2 p-2 bg-[#262626] rounded-md">
-                                <p class="font-jakarta text-[#8a8888] text-sm">Created At: {{
-                                    dayjs(items.CreatedAt).format("DD/MM/YYYY HH:mm:ss") }}</p>
-                                <p class="text-white font-jakarta text-base">{{ items.title }}</p>
+                <div class="my-4 overflow-y-auto max-h-[60vh] custom-scroll">
+                    <VueDraggable v-model="value.taskDatas" @add="(event) => updateStartDate(event, value.day)"
+                        :onMove="(event) => checkIfUpdateStartDatePossible(event)" ghostClass="ghost" :animation="150"
+                        :sort="false" :group="{ name: 'tasks' }" :data-day="value.day">
+                        <div v-if="value.taskDatas.length > 0" v-for="(items, childIndex) in value.taskDatas"
+                            :key="childIndex" :data-task-id="items.ID" :class="[childIndex > 0 ? 'mt-2' : '']">
+                            <div
+                                class="flex justify-start items-center cursor-pointer">
+                                <n-checkbox :checked="items.completed"
+                                    @update-checked="(value: boolean) => updateTaskCheckbox(items.ID, value)" />
+                                <div @click="setSelectedTaskInformation(value.taskDatas[childIndex])" class="ml-2 p-2 bg-[#262626] rounded-md">
+                                    <p class="font-jakarta text-[#8a8888] text-sm">Created At: {{
+                                        dayjs(items.CreatedAt).format("DD/MM/YYYY HH:mm:ss") }}</p>
+                                    <p class="text-white font-jakarta text-base">{{ items.title }}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </VueDraggable>
                 </div>
-                <n-input block v-model:value="taskInputArray[index]" @blur="sanitizeTextInput(index)" type="textarea"
+                <n-input :input-props="{
+                    id: `task-title-next-seven-days-${index}`,
+                    name: 'taskTitleNextSevenDays'
+                }" block v-model:value="taskInputArray[index]" @blur="sanitizeTextInput(index)" type="textarea"
                     :resizable="false" placeholder="+ Add Task"
                     :theme-overrides="{ color: 'backdrop-blur-sm', borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc', colorFocus: 'backdrop-blur-sm', textColor: 'white' }">
                     <template #suffix>

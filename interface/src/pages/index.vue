@@ -108,7 +108,7 @@ onMounted(async () => {
       backgroundPosition: '200% center'
     }" />
     <div
-      :class="[`${isSettingsVisible ? 'w-[15%]' : 'w-[5%]'} ${isSettingsVisible ? 'bg-[#0d0d0d]' : 'bg-[#1c1c1c]'}  py-5 px-5`]"
+      :class="[`${isSettingsVisible ? 'w-[15%]' : 'w-[5%]'} ${isSettingsVisible ? 'bg-[#0d0d0d]' : 'bg-[#1c1c1c]'} ${scale < 1 ? '' : 'py-5 px-5'}`]"
       @mouseenter="showSettings = true" @mouseleave="showSettings = false">
       <n-button v-if="!isSettingsVisible"
         :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc' }" class="setting-btn"
