@@ -50,20 +50,24 @@ watch([username, password], () => {
         <div class="px-20">
           <h1 class="font-jakarta mb-10 text-white text-2xl font-bold">Welcome! This is practice</h1>
           <h1 class="font-jakarta mb-6 text-white text-2xl font-bold">Login</h1>
-          <div class="mb-4">
-            <p class="font-jakarta mb-2 font-light text-[13px] text-white">Username: </p>
-            <n-input :status="credentialIncomplete && username.length === 0 ? 'error' : 'success'" type="text"
-              v-model:value="username" placeholder="Username" />
-          </div>
-          <div class="mb-[11px]">
-            <p class="font-jakarta mb-2 font-light text-[13px] text-white">Password: </p>
-            <n-input :status="credentialIncomplete && password.length === 0 ? 'error' : 'success'" type="password"
-              v-model:value="password" placeholder="Password" show-password-on="click" />
-          </div>
-          <p class="font-jakarta font-light text-[13px] text-white">Forgot Password?</p>
-          <div class="my-6">
-            <n-button @click="handleSignIn" block color="#003465">Sign in</n-button>
-          </div>
+          <form @submit.prevent="handleSignIn">
+            <div class="mb-4">
+              <p class="font-jakarta mb-2 font-light text-[13px] text-white">Username: </p>
+              <n-input :input-props="{ id: 'username-input', name: 'usernameInput', autocomplete: 'username' }"
+                :status="credentialIncomplete && username.length === 0 ? 'error' : 'success'" type="text"
+                v-model:value="username" placeholder="Username" />
+            </div>
+            <div class="mb-[11px]">
+              <p class="font-jakarta mb-2 font-light text-[13px] text-white">Password: </p>
+              <n-input :input-props="{ id: 'password-input', name: 'passwordInput', autocomplete: 'current-password' }"
+                :status="credentialIncomplete && password.length === 0 ? 'error' : 'success'" type="password"
+                v-model:value="password" placeholder="Password" show-password-on="click" />
+            </div>
+            <p class="font-jakarta font-light text-[13px] text-white">Forgot Password?</p>
+            <div class="my-6">
+              <n-button attr-type="submit" block color="#003465">Sign in</n-button>
+            </div>
+          </form>
           <div class="mb-6 flex justify-center">
             <p class="font-jakarta font-light text-[13px] text-white">or continue with</p>
           </div>
