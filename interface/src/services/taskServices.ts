@@ -225,3 +225,31 @@ export async function deleteExistingSubtask(subTaskId: number, taskId: number) {
     };
   }
 }
+
+export async function changeTaskStartDate(
+  taskId: number,
+  userId: number,
+  taskStartDate: string,
+) {
+  try {
+    const result = await axios({
+      method: 'PUT',
+      url: `http://localhost:8080/updateTaskStartDate?taskId=${taskId}&userId=${userId}`,
+      data: {
+        task_start: taskStartDate
+      }
+    })
+    const messageData = {
+      status: result.status,
+      messageTitle: result.data.messageTitle,
+      message: result.data.message
+    }
+    return messageData
+  } catch (error: any) {
+    return {
+      status: error.response.status,
+      messageTitle: error.response.data.messageTitle,
+      message: error.response.data.message,
+    };
+  }
+}

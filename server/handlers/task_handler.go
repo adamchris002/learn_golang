@@ -346,3 +346,46 @@ func DeleteSubtask(w http.ResponseWriter, r *http.Request) {
 		"message":      fmt.Sprintf("Sub-Task with id of %d has been deleted", taskId),
 	})
 }
+
+func UpdateTaskStartDate(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+		StartDate string `json:"task_start"`
+	}
+
+	taskId, err := strconv.Atoi(r.URL.Query().Get("taskId"))
+	if err != nil || taskId <= 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message": "Invalid Task ID",
+		})
+	}
+	userId, err := strconv.Atoi(r.URL.Query().Get("userId"))
+	if err != nil || userId <= 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message": "Invalid User ID",
+		})
+	}
+
+	json.NewDecoder(r.Body).Decode(&body)
+
+	result := database.DB.Model(&models.Task{}).Where("id = ? AND user_id = ?", taskId, userId).Update("task_start", body.StartDate)
+
+	if result.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message": result.Error.Error(),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"messageTitle": "Update Task Success",
+		"message":      fmt.Sprintf("Task with ID %d has been updated", taskId),
+	})
+}

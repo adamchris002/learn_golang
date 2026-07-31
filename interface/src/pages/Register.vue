@@ -51,34 +51,43 @@ watch([username, password, firstName, lastName], () => {
                 <div class="px-20">
                     <h1 class="font-jakarta mb-10 text-white text-2xl font-bold">Welcome! This is practice</h1>
                     <h1 class="font-jakarta mb-6 text-white text-2xl font-bold">Register</h1>
-                    <div class="mb-4">
-                        <p class="font-jakarta mb-2 font-light text-[13px] text-white">First Name: </p>
-                        <n-input :status="credentialIncomplete && firstName.length === 0 ? 'error' : 'success'"
-                            type="text" v-model:value="firstName" placeholder="First Name" />
-                    </div>
-                    <div class="mb-4">
-                        <p class="font-jakarta mb-2 font-light text-[13px] text-white">Last Name: </p>
-                        <n-input :status="credentialIncomplete && lastName.length === 0 ? 'error' : 'success'"
-                            type="text" v-model:value="lastName" placeholder="Last Name" />
-                    </div>
-                    <div class="mb-4">
-                        <p class="font-jakarta mb-2 font-light text-[13px] text-white">Username: </p>
-                        <n-input :status="credentialIncomplete && username.length === 0 ? 'error' : 'success'"
-                            type="text" v-model:value="username" placeholder="Username" />
-                    </div>
-                    <div class="mb-4">
-                        <p class="font-jakarta mb-2 font-light text-[13px] text-white">Email: </p>
-                        <n-input :status="credentialIncomplete && email.length === 0 ? 'error' : 'success'" type="text"
-                            v-model:value="email" placeholder="Email" />
-                    </div>
-                    <div class="mb-[11px]">
-                        <p class="font-jakarta mb-2 font-light text-[13px] text-white">Password: </p>
-                        <n-input :status="credentialIncomplete && password.length === 0 ? 'error' : 'success'"
-                            type="password" v-model:value="password" placeholder="Password" show-password-on="click" />
-                    </div>
-                    <div class="my-6">
-                        <n-button @click="handleRegister" block color="#003465">Sign in</n-button>
-                    </div>
+                    <form @submit.prevent="handleRegister">
+                        <div class="mb-4">
+                            <p class="font-jakarta mb-2 font-light text-[13px] text-white">First Name: </p>
+                            <n-input :input-props="{ id: 'first-name-input', name: 'firstNameInput' }"
+                                :status="credentialIncomplete && firstName.length === 0 ? 'error' : 'success'"
+                                type="text" v-model:value="firstName" placeholder="First Name" />
+                        </div>
+                        <div class="mb-4">
+                            <p class="font-jakarta mb-2 font-light text-[13px] text-white">Last Name: </p>
+                            <n-input :input-props="{ id: 'last-name-input', name: 'lastNameInput ' }"
+                                :status="credentialIncomplete && lastName.length === 0 ? 'error' : 'success'"
+                                type="text" v-model:value="lastName" placeholder="Last Name" />
+                        </div>
+                        <div class="mb-4">
+                            <p class="font-jakarta mb-2 font-light text-[13px] text-white">Email: </p>
+                            <n-input :input-props="{ id: 'email-input', name: 'emailInput' }"
+                                :status="credentialIncomplete && email.length === 0 ? 'error' : 'success'" type="text"
+                                v-model:value="email" placeholder="Email" />
+                        </div>
+                        <div class="mb-4">
+                            <p class="font-jakarta mb-2 font-light text-[13px] text-white">Username: </p>
+                            <n-input :input-props="{ id: 'username-input', name: 'usernameInput', autocomplete: 'username' }"
+                                :status="credentialIncomplete && username.length === 0 ? 'error' : 'success'"
+                                type="text" v-model:value="username" placeholder="Username" />
+                        </div>
+                        <div class="mb-[11px]">
+                            <p class="font-jakarta mb-2 font-light text-[13px] text-white">Password: </p>
+                            <n-input
+                                :input-props="{ id: 'password-input', name: 'passwordInput', autocomplete: 'current-password' }"
+                                :status="credentialIncomplete && password.length === 0 ? 'error' : 'success'"
+                                type="password" v-model:value="password" placeholder="Password"
+                                show-password-on="click" />
+                        </div>
+                        <div class="my-6">
+                            <n-button attr-type="submit" block color="#003465">Register</n-button>
+                        </div>
+                    </form>
 
                     <div class="flex justify-center">
                         <p class="mt-6 font-jakarta font-light text-[13px] text-white">
