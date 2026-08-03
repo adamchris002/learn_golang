@@ -111,6 +111,14 @@ async function callOneWeekTask() {
   }
 }
 
+async function refreshAllTasks() {
+  await Promise.all([
+    callTodaysTasks(),
+    callOneWeekTask(),
+    callAllIncompleteTasks()
+  ])
+}
+
 onMounted(async () => {
   currentComponent.value = menuItems[0]?.component ?? null
   if (authStore.token !== null) {
@@ -185,7 +193,7 @@ onMounted(async () => {
       <component :is="currentComponent" v-bind="componentProps" />
     </div>
 
-    <AllTaskDrawer :show-drawer="showTaskDrawer" :all-incomplete-tasks="allIncompleteTasks" @toggle-drawer="toggleTasksDrawer" @request-call-all-incomplete-tasks="callAllIncompleteTasks" />
+    <AllTaskDrawer :show-drawer="showTaskDrawer" :all-incomplete-tasks="allIncompleteTasks" @toggle-drawer="toggleTasksDrawer" @request-refresh-all-tasks="refreshAllTasks" />
   </div>
 
 </template>
