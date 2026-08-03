@@ -42,13 +42,13 @@ const componentProps = computed(() => {
     case MyDay:
       return {
         todaysTaskArray: todayTaskArray.value,
-        onRequestCallTodaysTask: callTodaysTasks,
+        onRequestCallTodaysTask: refreshAllTasks,
       }
 
     case Next7Days:
       return {
         nextSevenDaysTaskArray: next7DaysTaskArray.value,
-        onRequestCallNextSevenDays: callOneWeekTask,
+        onRequestCallNextSevenDays: refreshAllTasks,
       }
 
     default:
