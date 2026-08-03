@@ -53,6 +53,29 @@ export type SubTaskResponse = {
   taskId: number;
 };
 
+export async function getAllIncompleteTasks(userId: number) {
+  try {
+    const result = await axios.get(
+      `http://localhost:8080/incompleteTasks?userId=${userId}`,
+    );
+    return {
+      success: true,
+      data: result.data,
+      messageData: null,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      data: null,
+      messageData: {
+        status: error.response.status,
+        messageTitle: error.response.data.messageTitle,
+        message: error.response.data.message,
+      },
+    };
+  }
+}
+
 export async function getOneWeekTasks(userId: number) {
   try {
     const result = await axios.get(
@@ -233,18 +256,39 @@ export async function changeTaskStartDate(
 ) {
   try {
     const result = await axios({
-      method: 'PUT',
+      method: "PUT",
       url: `http://localhost:8080/updateTaskStartDate?taskId=${taskId}&userId=${userId}`,
       data: {
-        task_start: taskStartDate
-      }
-    })
+        task_start: taskStartDate,
+      },
+    });
     const messageData = {
       status: result.status,
       messageTitle: result.data.messageTitle,
-      message: result.data.message
-    }
-    return messageData
+      message: result.data.message,
+    };
+    return messageData;
+  } catch (error: any) {
+    return {
+      status: error.response.status,
+      messageTitle: error.response.data.messageTitle,
+      message: error.response.data.message,
+    };
+  }
+}
+
+export async function changeActiveTaskValue(taskId: number, userId: number) {
+  try {
+    const result = await axios({
+      method: "PUT",
+      url: `http://localhost:8080/changeActiveTaskValue?taskId=${taskId}&userId=${userId}`,
+    });
+    const messageData = {
+      status: result.status,
+      messageTitle: result.data.messageTitle,
+      message: result.data.message,
+    };
+    return messageData;
   } catch (error: any) {
     return {
       status: error.response.status,

@@ -7,7 +7,6 @@ import { useTimeNow } from "@/composable/timeNow"
 import { useItemScale } from "@/composable/pageAdjuster"
 import { sanitizeInput } from "@/composable/sanitizeInput.ts"
 
-import { VueDraggable } from "vue-draggable-plus"
 import { NInput, NButton, NIcon, NAlert } from "naive-ui"
 import send from "@/assets/icons/send.svg"
 import TaskLists from "./TaskLists.vue"

@@ -44,6 +44,26 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func CallAllIncompleteTasks(w http.ResponseWriter, r *http.Request) {
+	var tasks []models.Task
+
+	userID := r.URL.Query().Get("userId")
+
+	result := database.DB.
+		Preload("Subtasks").
+		Where("tasks.user_id = ? AND tasks.completed = false", userID).
+		Find(&tasks)
+
+	if result.Error != nil {
+		http.Error(w, "Error retrieving tasks", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(tasks)
+}
+
 func CallOneWeekTasks(w http.ResponseWriter, r *http.Request) {
 	var tasks []models.Task
 
@@ -348,7 +368,7 @@ func DeleteSubtask(w http.ResponseWriter, r *http.Request) {
 }
 
 func UpdateTaskStartDate(w http.ResponseWriter, r *http.Request) {
-		var body struct {
+	var body struct {
 		StartDate string `json:"task_start"`
 	}
 
@@ -357,7 +377,7 @@ func UpdateTaskStartDate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
 			"messageTitle": "Update Task Failed",
-			"message": "Invalid Task ID",
+			"message":      "Invalid Task ID",
 		})
 	}
 	userId, err := strconv.Atoi(r.URL.Query().Get("userId"))
@@ -365,7 +385,7 @@ func UpdateTaskStartDate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]string{
 			"messageTitle": "Update Task Failed",
-			"message": "Invalid User ID",
+			"message":      "Invalid User ID",
 		})
 	}
 
@@ -377,7 +397,44 @@ func UpdateTaskStartDate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
 			"messageTitle": "Update Task Failed",
-			"message": result.Error.Error(),
+			"message":      result.Error.Error(),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"messageTitle": "Update Task Success",
+		"message":      fmt.Sprintf("Task with ID %d has been updated", taskId),
+	})
+}
+
+func ChangeActiveTaskValue(w http.ResponseWriter, r *http.Request) {
+	taskId, err := strconv.Atoi(r.URL.Query().Get("taskId"))
+	if err != nil || taskId <= 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message":      "Invalid Task ID",
+		})
+	}
+	userId, err := strconv.Atoi(r.URL.Query().Get("userId"))
+	if err != nil || userId <= 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message":      "Invalid User ID",
+		})
+	}
+
+	result := database.DB.Model(&models.Task{}).Where("id = ? AND user_id = ?", taskId, userId).Update("due_date", "")
+
+	if result.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message":      result.Error.Error(),
 		})
 	}
 
