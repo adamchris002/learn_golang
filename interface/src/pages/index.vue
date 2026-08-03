@@ -42,13 +42,13 @@ const componentProps = computed(() => {
     case MyDay:
       return {
         todaysTaskArray: todayTaskArray.value,
-        onRequestCallTodaysTask: callTodaysTasks,
+        onRequestCallTodaysTask: refreshAllTasks,
       }
 
     case Next7Days:
       return {
         nextSevenDaysTaskArray: next7DaysTaskArray.value,
-        onRequestCallNextSevenDays: callOneWeekTask,
+        onRequestCallNextSevenDays: refreshAllTasks,
       }
 
     default:
@@ -109,6 +109,14 @@ async function callOneWeekTask() {
   } else {
     authStore.setMessage(result.messageData);
   }
+}
+
+async function refreshAllTasks() {
+  await Promise.all([
+    callTodaysTasks(),
+    callOneWeekTask(),
+    callAllIncompleteTasks()
+  ])
 }
 
 onMounted(async () => {
@@ -185,7 +193,7 @@ onMounted(async () => {
       <component :is="currentComponent" v-bind="componentProps" />
     </div>
 
-    <AllTaskDrawer :show-drawer="showTaskDrawer" :all-incomplete-tasks="allIncompleteTasks" @toggle-drawer="toggleTasksDrawer" @request-call-all-incomplete-tasks="callAllIncompleteTasks" />
+    <AllTaskDrawer :show-drawer="showTaskDrawer" :all-incomplete-tasks="allIncompleteTasks" @toggle-drawer="toggleTasksDrawer" @request-refresh-all-tasks="refreshAllTasks" />
   </div>
 
 </template>
