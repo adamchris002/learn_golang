@@ -13,7 +13,7 @@ const auth = useAuthStore()
 const user = JSON.parse(localStorage.getItem("user") || "{}")
 
 const props = defineProps<{ showDrawer: boolean, allIncompleteTasks: TaskResponse[] }>()
-const emits = defineEmits(['toggleDrawer', 'requestCallAllIncompleteTasks'])
+const emits = defineEmits(['toggleDrawer', 'requestRefreshAllTasks'])
 
 const activeTasks = ref<TaskResponse[]>([])
 const pendingTasks = ref<TaskResponse[]>([])
@@ -24,7 +24,7 @@ const toggleDrawer = () => {
 
 async function handleChangeActiveTasks(event: DraggableEvent<TaskResponse>) {
     auth.message = await changeActiveTaskValue(event.data.ID, user.id)
-    emits('requestCallAllIncompleteTasks')
+    emits('requestRefreshAllTasks')
 }
 
 watch(() => props.allIncompleteTasks, (newValue) => {
