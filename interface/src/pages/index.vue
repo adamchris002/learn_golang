@@ -5,7 +5,7 @@
 }</route>
 <script setup lang="ts">
 import router from "@/router"
-import { computed, onMounted, ref, shallowRef, watch, type Component } from "vue"
+import { computed, onMounted, ref, shallowRef, type Component } from "vue"
 import { useAuthStore } from "@/stores/auth"
 import { NButton, NIcon } from "naive-ui"
 
@@ -16,23 +16,26 @@ import { useTimeNow } from "@/composable/timeNow"
 import { drawerItemScale } from "@/composable/pageAdjuster"
 import { menuItems } from "@/datas/homeItems"
 import { verifyTokenAndLogin } from "@/services/authServices"
-import { getOneWeekTasks, getTodaysTasks, type TaskResponse } from "@/services/taskServices"
+import { getOneWeekTasks, getTodaysTasks, getAllIncompleteTasks, type TaskResponse } from "@/services/taskServices"
 import MyDay from "@/components/MyDay.vue"
 import Next7Days from "@/components/Next7Days.vue"
+import AllTaskDrawer from "@/components/AllTaskDrawer.vue"
 
 const authStore = useAuthStore()
 const scale = drawerItemScale()
 
 const currentComponent = shallowRef<Component | null>(null);
 
-const showSettings = ref(true)
-const settingsPinned = ref(true)
+const showSettings = ref<boolean>(true)
+const settingsPinned = ref<boolean>(true)
+const showTaskDrawer = ref<boolean>(false)
 
 const user = JSON.parse(localStorage.getItem("user") || "{}")
 const { currentTime } = useTimeNow()
 
 const todayTaskArray = ref<TaskResponse[]>([])
 const next7DaysTaskArray = ref<TaskResponse[]>([])
+const allIncompleteTasks = ref<TaskResponse[]>([])
 
 const componentProps = computed(() => {
   switch (currentComponent.value) {
@@ -53,6 +56,10 @@ const componentProps = computed(() => {
   }
 })
 
+function toggleTasksDrawer(value: boolean) {
+  showTaskDrawer.value = value
+}
+
 function handleLogout() {
   authStore.logout()
   router.push('/Login')
@@ -61,6 +68,20 @@ function handleLogout() {
 const isSettingsVisible = computed(() => {
   return showSettings.value || settingsPinned.value
 })
+
+async function callAllIncompleteTasks() {
+  const result = await getAllIncompleteTasks(user.id);
+
+  if (result.success) {
+    allIncompleteTasks.value = result.data.sort(
+      (a: TaskResponse, b: TaskResponse) =>
+        new Date(a.CreatedAt).getTime() -
+        new Date(b.CreatedAt).getTime()
+    );
+  } else {
+    authStore.setMessage(result.messageData);
+  }
+}
 
 async function callTodaysTasks() {
   const result = await getTodaysTasks(user.id);
@@ -97,6 +118,7 @@ onMounted(async () => {
   }
   await callTodaysTasks()
   await callOneWeekTask()
+  await callAllIncompleteTasks()
 })
 
 </script>
@@ -162,6 +184,8 @@ onMounted(async () => {
     <div :class="[`${isSettingsVisible ? 'w-[85%]' : 'w-[95%]'} bg-[#1c1c1c]`]">
       <component :is="currentComponent" v-bind="componentProps" />
     </div>
+
+    <AllTaskDrawer :show-drawer="showTaskDrawer" :all-incomplete-tasks="allIncompleteTasks" @toggle-drawer="toggleTasksDrawer" @request-call-all-incomplete-tasks="callAllIncompleteTasks" />
   </div>
 
 </template>
