@@ -16,10 +16,10 @@ export function useItemScale() {
   });
 
   const scale = computed(() => {
-    if (width.value < 1200) return 0.5;
-    if (width.value < 1480) return 0.7;
-    if (width.value < 1550) return 0.8;
-    return 1;
+    if (width.value < 1200) return   {scale: 0.5, zoom: '170%'};
+    if (width.value < 1480) return  {scale: 0.7, zoom: '130%'};
+    if (width.value < 1500) return  {scale: 0.8, zoom: '100%'};
+    return {scale: 1, zoom: '100%'};
   });
 
   return scale;

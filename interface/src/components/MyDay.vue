@@ -135,7 +135,7 @@ watch(() => props.todaysTaskArray, (newValue) => {
 </script>
 <template>
     <div class="w-full h-screen flex flex-col items-center py-10 scale-container"
-        :style="{ transform: `scale(${scale})`, transformOrigin: scale > 0.7 ? 'center' : 'top', zoom: scale < 0.7 ? '200%' : scale < 0.8 ? '130%' : '' }">
+        :style="{ transform: `scale(${scale.scale})`, transformOrigin: 'center top', zoom: scale.zoom }">
         <div>
             <h1 class="text-4xl font-jakarta">
                 <span class="text-white">
