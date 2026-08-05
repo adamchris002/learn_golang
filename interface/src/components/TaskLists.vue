@@ -32,7 +32,7 @@ watch(() => props.taskArray, (newValue) => {
 </script>
 <template>
     <div>
-        <div v-if="taskArray.length > 0 && taskArray" class="max-h-[60vh] overflow-y-auto custom-scroll">
+        <div v-if="taskArray.length > 0 && taskArray" class="max-h-[55vh] overflow-y-auto custom-scroll">
             <div class="w-200 mt-4 flex justify-start">
                 <p class="font-jakarta text-2xl text-white font-semibold">Completed Tasks</p>
             </div>
