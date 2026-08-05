@@ -1,4 +1,9 @@
 import axios from "axios";
+import dayjs from "dayjs";
+import customParseFormat from 'dayjs/plugin/customParseFormat'
+
+dayjs.extend(customParseFormat)
+
 
 type task = {
   title: string;
@@ -277,18 +282,53 @@ export async function changeTaskStartDate(
   }
 }
 
-export async function changeActiveTaskValue(taskId: number, userId: number) {
+// export async function changeTaskToPending(taskId: number, userId: number) {
+//   try {
+//     const result = await axios({
+//       method: "PUT",
+//       url: `http://localhost:8080/changeTaskToPending?taskId=${taskId}&userId=${userId}`,
+//     });
+//     const messageData = {
+//       status: result.status,
+//       messageTitle: result.data.messageTitle,
+//       message: result.data.message,
+//     };
+//     return messageData;
+//   } catch (error: any) {
+//     return {
+//       status: error.response.status,
+//       messageTitle: error.response.data.messageTitle,
+//       message: error.response.data.message,
+//     };
+//   }
+// }
+
+export async function changeTaskToActive(taskId: number, userId: number, taskDueDate: string) {
   try {
+ let dueDate = ""
+
+    if (taskDueDate) {
+      const parsedDueDate = dayjs(taskDueDate, "DD/MM/YYYY")
+      const today = dayjs()
+
+      if (!parsedDueDate.isBefore(today, "day")) {
+        dueDate = taskDueDate
+      }
+    }
+
     const result = await axios({
       method: "PUT",
-      url: `http://localhost:8080/changeActiveTaskValue?taskId=${taskId}&userId=${userId}`,
-    });
-    const messageData = {
+      url: `http://localhost:8080/changeTaskToActive?taskId=${taskId}&userId=${userId}`,
+      data: {
+        due_date: dueDate,
+      },
+    })
+
+    return {
       status: result.status,
       messageTitle: result.data.messageTitle,
       message: result.data.message,
     };
-    return messageData;
   } catch (error: any) {
     return {
       status: error.response.status,

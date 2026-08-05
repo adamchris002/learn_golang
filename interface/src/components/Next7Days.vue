@@ -211,7 +211,7 @@ watch(() => props.nextSevenDaysTaskArray, (newValue) => {
             <p class="font-jakarta text-white text-lg">Next 7 Days</p>
         </div>
         <div class="flex items-start w-full pt-8 scale-container"
-            :style="{ transform: `scale(${scale})`, transformOrigin: 'top left' }">
+            :style="{ transform: `scale(${scale.scale})`, transformOrigin: 'top left', zoom: scale.zoom }">
             <div v-for="(value, index) in days" :key="index"
                 class="w-[300px] shrink-0 backdrop-blur-sm inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] p-4 rounded-xl mr-8">
                 <div class="flex justify-start">
@@ -227,7 +227,7 @@ watch(() => props.nextSevenDaysTaskArray, (newValue) => {
                 <div class="my-4 overflow-y-auto max-h-[60vh] custom-scroll">
                     <VueDraggable v-model="value.taskDatas" @add="(event) => updateStartDate(event, value.day)"
                         :onMove="(event) => checkIfUpdateStartDatePossible(event)" ghostClass="ghost" :animation="150"
-                        :sort="false" :group="{ name: 'tasks' }" :data-day="value.day">
+                        :sort="false" :group="{ name: 'tasks', pull: true, put: ['tasks','active','pending','past'] }" :data-day="value.day">
                         <div v-if="value.taskDatas.length > 0" v-for="(items, childIndex) in value.taskDatas"
                             :key="childIndex" :data-task-id="items.ID" :class="[childIndex > 0 ? 'mt-2' : '']">
                             <div
