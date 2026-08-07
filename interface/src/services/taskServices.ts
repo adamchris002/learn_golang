@@ -58,6 +58,29 @@ export type SubTaskResponse = {
   taskId: number;
 };
 
+export async function getAllTasks(userId: number) {
+  try {
+    const result = await axios.get(
+      `http://localhost:8080/allTasks?userId=${userId}`,
+    );
+    return {
+      success: true,
+      data: result.data,
+      messageData: null,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      data: null,
+      messageData: {
+        status: error.response.status,
+        messageTitle: error.response.data.messageTitle,
+        message: error.response.data.message,
+      },
+    };
+  }
+}
+
 export async function getAllIncompleteTasks(userId: number) {
   try {
     const result = await axios.get(
