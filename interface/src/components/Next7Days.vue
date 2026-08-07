@@ -225,23 +225,21 @@ watch(() => props.nextSevenDaysTaskArray, (newValue) => {
                             dayjs(value.day, "DD/MM/YYYY").format('dddd') }}</p>
                 </div>
                 <div class="my-4 overflow-y-auto max-h-[60vh] custom-scroll">
-                    <VueDraggable v-model="value.taskDatas" @add="(event) => updateStartDate(event, value.day)"
+                    <vue-draggable v-model="value.taskDatas" @add="(event) => updateStartDate(event, value.day)"
                         :onMove="(event) => checkIfUpdateStartDatePossible(event)" ghostClass="ghost" :animation="150"
-                        :sort="false" :group="{ name: 'tasks', pull: true, put: ['tasks','active','pending','past'] }" :data-day="value.day">
-                        <div v-if="value.taskDatas.length > 0" v-for="(items, childIndex) in value.taskDatas"
-                            :key="childIndex" :data-task-id="items.ID" :class="[childIndex > 0 ? 'mt-2' : '']">
-                            <div
-                                class="flex justify-start items-center cursor-pointer">
-                                <n-checkbox :checked="items.completed"
-                                    @update-checked="(value: boolean) => updateTaskCheckbox(items.ID, value)" />
-                                <div @click="setSelectedTaskInformation(value.taskDatas[childIndex])" class="ml-2 p-2 bg-[#262626] rounded-md">
-                                    <p class="font-jakarta text-[#8a8888] text-sm">Created At: {{
-                                        dayjs(items.CreatedAt).format("DD/MM/YYYY HH:mm:ss") }}</p>
-                                    <p class="text-white font-jakarta text-base">{{ items.title }}</p>
-                                </div>
+                        :group="{ name: 'tasks', pull: true, put: ['tasks','active','pending','past']  }" :data-day="value.day" :sort="false">
+                        <div v-for="task in value.taskDatas" :key="task.ID"
+                            class=" rounded-lg w-full backdrop-blur-sm inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] px-4 py-2 flex items-center"
+                            :data-task-id="task.ID">
+                            <n-checkbox :checked="task.completed"
+                                @update-checked="(value: boolean) => updateTaskCheckbox(task.ID, value)" />
+                            <div @click="setSelectedTaskInformation(task)" class="w-full cursor-pointer">
+                                <p class="font-jakarta text-[#8a8888] text-xs ml-4">Created at: {{
+                                    dayjs(task.CreatedAt).format("DD/MM/YYYY HH:mm:ss") }}</p>
+                                <p class="font-jakarta text-white text-base ml-4">{{ task.title }}</p>
                             </div>
                         </div>
-                    </VueDraggable>
+                    </vue-draggable>
                 </div>
                 <n-input :input-props="{
                     id: `task-title-next-seven-days-${index}`,
