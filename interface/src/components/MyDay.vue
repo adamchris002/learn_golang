@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue"
+import { onMounted, ref, watch } from "vue"
 import { deleteExistingSubtask, deleteTask, postTodaysTask, updateTaskCompletion, updateTaskValues, type TaskResponse } from "@/services/taskServices"
 import dayjs from "dayjs"
 
@@ -177,16 +177,16 @@ watch(() => props.todaysTaskArray, (newValue) => {
                 </template>
             </n-input>
         </div>
-        <div class="absolute top-2 right-2 z-9999">
-            <n-alert v-if="taskErrorMessage" :title="taskErrorMessage.messageTitle"
-                :type="taskErrorMessage.status === 200 ? 'success' : 'error'" closable @close="taskErrorMessage = null">
-                {{ taskErrorMessage.message }}
-            </n-alert>
-        </div>
     </div>
     <TaskDetail :open="openDetails" :task="taskInformation" @close-modal="closeTaskInformation"
         @delete-task="handleDeleteTask" @update-task-datas="handleUpdateTaskValues"
         @delete-subtask="handleDeleteSubtask" />
+    <div class="absolute top-2 right-2 z-9999">
+        <n-alert v-if="taskErrorMessage" :title="taskErrorMessage.messageTitle"
+            :type="taskErrorMessage.status === 200 ? 'success' : 'error'" closable @close="taskErrorMessage = null">
+            {{ taskErrorMessage.message }}
+        </n-alert>
+    </div>
 </template>
 <style scoped>
 .scale-container {
