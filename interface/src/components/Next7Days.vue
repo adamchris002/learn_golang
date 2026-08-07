@@ -227,16 +227,17 @@ watch(() => props.nextSevenDaysTaskArray, (newValue) => {
                 <div class="my-4 overflow-y-auto max-h-[60vh] custom-scroll">
                     <vue-draggable v-model="value.taskDatas" @add="(event) => updateStartDate(event, value.day)"
                         :onMove="(event) => checkIfUpdateStartDatePossible(event)" ghostClass="ghost" :animation="150"
-                        :group="{ name: 'tasks', pull: true, put: ['tasks','active','pending','past']  }" :data-day="value.day" :sort="false">
-                        <div v-for="task in value.taskDatas" :key="task.ID"
-                            class=" rounded-lg w-full backdrop-blur-sm inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] px-4 py-2 flex items-center"
+                        :group="{ name: 'tasks', pull: true, put: ['tasks', 'active', 'pending', 'past'] }"
+                        :data-day="value.day" :sort="false">
+                        <div v-for="(task, childIndex) in value.taskDatas" :key="task.ID"
+                            :class="['rounded-lg w-full backdrop-blur-sm inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] px-4 py-2 flex items-center', childIndex === 0 ? '' : 'mt-2']"
                             :data-task-id="task.ID">
                             <n-checkbox :checked="task.completed"
                                 @update-checked="(value: boolean) => updateTaskCheckbox(task.ID, value)" />
                             <div @click="setSelectedTaskInformation(task)" class="w-full cursor-pointer">
                                 <p class="font-jakarta text-[#8a8888] text-xs ml-4">Created at: {{
                                     dayjs(task.CreatedAt).format("DD/MM/YYYY HH:mm:ss") }}</p>
-                                <p class="font-jakarta text-white text-base ml-4">{{ task.title }}</p>
+                                <p class="font-jakarta text-white text-base ml-4 truncate w-45">{{ task.title }}</p>
                             </div>
                         </div>
                     </vue-draggable>
@@ -259,16 +260,16 @@ watch(() => props.nextSevenDaysTaskArray, (newValue) => {
                 </n-input>
             </div>
         </div>
-        <div class="absolute top-2 right-2 z-9999">
-            <n-alert v-if="taskErrorMessage" :title="taskErrorMessage.messageTitle"
-                :type="taskErrorMessage.status === 200 ? 'success' : 'error'" closable @close="taskErrorMessage = null">
-                {{ taskErrorMessage.message }}
-            </n-alert>
-        </div>
     </div>
     <TaskDetail :open="openDetails" :task="selectedTaskInformation" @close-modal="closeSelectedTaskInformation"
         @delete-task="handleDeleteTasks" @update-task-datas="handleUpdateTasks"
         @delete-subtask="handleDeleteSubstasks" />
+    <div class="absolute top-2 right-2 z-9999">
+        <n-alert v-if="taskErrorMessage" :title="taskErrorMessage.messageTitle"
+            :type="taskErrorMessage.status === 200 ? 'success' : 'error'" closable @close="taskErrorMessage = null">
+            {{ taskErrorMessage.message }}
+        </n-alert>
+    </div>
 </template>
 <style scoped>
 .scale-container {
