@@ -44,6 +44,26 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func CallAllTasks(w http.ResponseWriter, r *http.Request) {
+	var tasks []models.Task
+
+	userID := r.URL.Query().Get("userId")
+
+	result := database.DB.
+		Preload("Subtasks").
+		Where("tasks.user_id = ?", userID).
+		Find(&tasks)
+
+	if result.Error != nil {
+		http.Error(w, "Error retrieving tasks", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(tasks)
+}
+
 func CallAllIncompleteTasks(w http.ResponseWriter, r *http.Request) {
 	var tasks []models.Task
 

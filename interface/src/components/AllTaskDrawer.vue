@@ -19,7 +19,7 @@ dayjs.extend(isSameOrAfter)
 const auth = useAuthStore()
 const user = JSON.parse(localStorage.getItem("user") || "{}")
 
-const props = defineProps<{ showDrawer: boolean, allIncompleteTasks: TaskResponse[] }>()
+const props = defineProps<{ showDrawer: boolean, allIncompleteTasks: TaskResponse[], taskDrawerPinned: boolean }>()
 const emits = defineEmits(['toggleDrawer', 'requestRefreshAllTasks'])
 
 const activeTasks = ref<TaskResponse[]>([])
@@ -86,7 +86,7 @@ watch(() => props.allIncompleteTasks, (newValue) => {
 }, { immediate: true, deep: true })
 </script>
 <template>
-    <div class="fixed z-20 right-0 top-1/2 -translate-y-1/2 flex items-center">
+    <div v-show="taskDrawerPinned" class="fixed z-20 right-0 top-1/2 -translate-y-1/2 flex items-center">
         <Transition name="drawer">
             <div v-if="props.showDrawer">
                 <div class="h-screen bg-black/40 backdrop-blur-sm inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] p-4">

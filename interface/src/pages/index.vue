@@ -16,10 +16,11 @@ import { useTimeNow } from "@/composable/timeNow"
 import { drawerItemScale } from "@/composable/pageAdjuster"
 import { menuItems } from "@/datas/homeItems"
 import { verifyTokenAndLogin } from "@/services/authServices"
-import { getOneWeekTasks, getTodaysTasks, getAllIncompleteTasks, type TaskResponse } from "@/services/taskServices"
+import { getOneWeekTasks, getTodaysTasks, getAllIncompleteTasks, type TaskResponse, getAllTasks } from "@/services/taskServices"
 import MyDay from "@/components/MyDay.vue"
 import Next7Days from "@/components/Next7Days.vue"
 import AllTaskDrawer from "@/components/AllTaskDrawer.vue"
+import AllMyTasks from "@/components/AllMyTasks.vue"
 
 const authStore = useAuthStore()
 const scale = drawerItemScale()
@@ -36,6 +37,9 @@ const { currentTime } = useTimeNow()
 const todayTaskArray = ref<TaskResponse[]>([])
 const next7DaysTaskArray = ref<TaskResponse[]>([])
 const allIncompleteTasks = ref<TaskResponse[]>([])
+const allTasks = ref<TaskResponse[]>([])
+
+const taskDrawerPinned = computed(() => currentComponent.value !== AllMyTasks)
 
 const componentProps = computed(() => {
   switch (currentComponent.value) {
@@ -49,6 +53,11 @@ const componentProps = computed(() => {
       return {
         nextSevenDaysTaskArray: next7DaysTaskArray.value,
         onRequestCallNextSevenDays: refreshAllTasks,
+      }
+    case AllMyTasks:
+      return {
+        allTasksArray: allTasks.value,
+        onRequestCallAllTasks: refreshAllTasks,
       }
 
     default:
@@ -74,6 +83,20 @@ async function callAllIncompleteTasks() {
 
   if (result.success) {
     allIncompleteTasks.value = result.data.sort(
+      (a: TaskResponse, b: TaskResponse) =>
+        new Date(a.CreatedAt).getTime() -
+        new Date(b.CreatedAt).getTime()
+    );
+  } else {
+    authStore.setMessage(result.messageData);
+  }
+}
+
+async function callAllTasks() {
+const result = await getAllTasks(user.id);
+
+  if (result.success) {
+    allTasks.value = result.data.sort(
       (a: TaskResponse, b: TaskResponse) =>
         new Date(a.CreatedAt).getTime() -
         new Date(b.CreatedAt).getTime()
@@ -115,7 +138,8 @@ async function refreshAllTasks() {
   await Promise.all([
     callTodaysTasks(),
     callOneWeekTask(),
-    callAllIncompleteTasks()
+    callAllIncompleteTasks(),
+    callAllTasks()
   ])
 }
 
@@ -127,6 +151,7 @@ onMounted(async () => {
   await callTodaysTasks()
   await callOneWeekTask()
   await callAllIncompleteTasks()
+  await callAllTasks()
 })
 
 </script>
@@ -193,7 +218,7 @@ onMounted(async () => {
       <component :is="currentComponent" v-bind="componentProps" />
     </div>
 
-    <AllTaskDrawer :show-drawer="showTaskDrawer" :all-incomplete-tasks="allIncompleteTasks" @toggle-drawer="toggleTasksDrawer" @request-refresh-all-tasks="refreshAllTasks" />
+    <AllTaskDrawer :task-drawer-pinned="taskDrawerPinned" :show-drawer="showTaskDrawer" :all-incomplete-tasks="allIncompleteTasks" @toggle-drawer="toggleTasksDrawer" @request-refresh-all-tasks="refreshAllTasks" />
   </div>
 
 </template>
