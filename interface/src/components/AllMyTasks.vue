@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { changeTaskStartDate, type TaskResponse } from "@/services/taskServices";
+import { changeTaskStartDate, deleteExistingSubtask, deleteTask, updateTaskValues, type TaskResponse } from "@/services/taskServices";
 import dayjs from "dayjs";
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
@@ -12,6 +12,7 @@ import addIcon from "@/assets/icons/add.svg"
 import closeIcon from "@/assets/icons/close.svg"
 import AllTasksItems from "./AllTasksItems.vue";
 import { useItemScale } from "@/composable/pageAdjuster.ts";
+import { sanitizeInput } from "@/composable/sanitizeInput.ts";
 
 dayjs.extend(customParseFormat)
 dayjs.extend(isSameOrBefore)
@@ -63,6 +64,56 @@ const formattedDueDate = computed({
     }
 })
 
+function addSubTask() {
+    const clickedTask = selectedTask.value
+    if (!clickedTask || clickedTask.subtasks == null) {
+        return
+    }
+    clickedTask.subtasks.push({
+        ID: 0,
+        CreatedAt: "",
+        UpdatedAt: "",
+        DeletedAt: "",
+        title: "",
+        completed: false,
+        taskId: 0
+    })
+
+}
+
+function sanitizeTitleTextInput() {
+    const clickedTask = selectedTask.value
+    if (!clickedTask || clickedTask.description == null) {
+        return
+    }
+
+    const textInput = clickedTask.description
+    const sanitizedText = sanitizeInput(textInput)
+    clickedTask.description = sanitizedText
+
+}
+
+function sanitizeSubtaskTitleTextInput(index: number) {
+    const clickedTasks = selectedTask.value
+
+    if (!clickedTasks) {
+        return
+    }
+
+    const clickedSubtasks = clickedTasks.subtasks
+
+    if (!clickedSubtasks || clickedSubtasks === null) {
+        return
+    }
+
+    const subtasks = clickedSubtasks[index]
+    if (!subtasks) {
+        return
+    }
+
+    subtasks.title = sanitizeInput(subtasks.title)
+}
+
 function handleSetTaskErrorMessage(data: { status: number; messageTitle: string; message: string }) {
     taskErrorMessage.value = data
 }
@@ -83,6 +134,56 @@ function disablePreviousDate(ts: number) {
     today.setHours(0, 0, 0, 0)
 
     return ts < today.getTime()
+}
+
+async function updateSelectedTask() {
+    const clickedTask = selectedTask.value
+    if (!clickedTask) {
+        return
+    }
+
+    const clickedTaskSubTasks = clickedTask.subtasks
+    if (!clickedTaskSubTasks || clickedTaskSubTasks === null) {
+        return
+    }
+    const subtasksData = clickedTaskSubTasks.map((subtask) => ({
+        id: subtask.ID,
+        title: subtask.title,
+        completed: subtask.completed,
+    }))
+
+    taskErrorMessage.value = await updateTaskValues(clickedTask.due_date, clickedTask.description, subtasksData, clickedTask.ID, user.id)
+    if (taskErrorMessage.value.status === 200){
+        emits('requestCallAllTasks')
+    }
+}
+
+async function deleteSelectedTask() {
+    const clickedTask = selectedTask.value
+    if (!clickedTask) {
+        return
+    }
+    taskErrorMessage.value = await deleteTask(clickedTask.ID, user.id)
+    if (taskErrorMessage.value.status == 200) {
+        selectedTask.value = null
+    }
+    emits('requestCallAllTasks')
+}
+
+async function deleteSubtasks(id: number, index: number) {
+    const clickedTask = selectedTask.value
+    if (!clickedTask || clickedTask.subtasks == null) {
+        return
+    }
+
+    if (id === 0) {
+        clickedTask.subtasks.splice(index, 1)
+    } else {
+        taskErrorMessage.value = await deleteExistingSubtask(id, clickedTask.ID)
+        if (taskErrorMessage.value.status === 200) {
+            emits('requestCallAllTasks')
+        }
+    }
 }
 
 async function handleUpdateTask(data: TaskResponse, name: string) {
@@ -132,7 +233,7 @@ watch(() => props.allTasksArray, (newValue) => {
 
             if (taskStart.isSame(tomorrow) && !hasDueDate) return true
 
-            if (taskStart.isSameOrBefore(tomorrow) && hasDueDate) {
+            if (taskStart.isSame(tomorrow) && hasDueDate) {
                 const dueDate = dayjs(data.due_date, "DD/MM/YYYY").startOf('day')
                 if (dueDate.isSameOrAfter(tomorrow)) return true
             }
@@ -160,6 +261,17 @@ watch(() => props.allTasksArray, (newValue) => {
         })
     }
 }, { immediate: true, deep: true })
+
+watch(() => props.allTasksArray, (newValue) => {
+    if (selectedTask.value !== null && newValue.some(data => data.ID === selectedTask.value?.ID)) {
+        const getselectedTask = newValue.find(data => data.ID === selectedTask.value?.ID)
+        if (getselectedTask) {
+            selectedTask.value = getselectedTask
+        }
+    }
+}, {immediate: true, deep: true})
+
+watch(() => selectedTask.value, (newValue) => { console.log(newValue) }, { immediate: true, deep: true })
 </script>
 <template>
     <div class="relative z-10 w-full px-4 py-8 h-screen scale-container"
@@ -172,13 +284,14 @@ watch(() => props.allTasksArray, (newValue) => {
             <p class="font-jakarta text-white text-lg">All My Tasks</p>
         </div>
         <div class="flex items-center justify-start mt-8">
-            <div class="min-h-[80vh] min-w-[30vw] rounded-lg backdrop-blur-sm bg-[#171717]/65 p-8">
-                <div class="max-h-[80vh] min-h-[80vh] overflow-x-auto custom-scroll">
+            <div class="min-h-[70vh] min-w-[30vw] rounded-lg backdrop-blur-sm bg-[#171717]/65 p-8">
+                <div class="max-h-[70vh] min-h-[70vh] overflow-x-auto custom-scroll">
                     <n-collapse v-model:expanded-names="expandedNames"
                         :theme-overrides="{ titleTextColor: 'white', titleFontSize: '20px' }">
                         <AllTasksItems name="today" :title="'Today'" :tasksArray="todaysTasks"
                             @shouldExpand="handleShouldExpand" @update-task="handleUpdateTask"
-                            @set-selected-task="handleSetSelectedTask" @send-error-message="handleSetTaskErrorMessage"/>
+                            @set-selected-task="handleSetSelectedTask"
+                            @send-error-message="handleSetTaskErrorMessage" />
                         <AllTasksItems name="tomorrow" :title="'Tomorrow'" :tasksArray="tomorrowsTasks"
                             @shouldExpand="handleShouldExpand" @update-task="handleUpdateTask"
                             @set-selected-task="handleSetSelectedTask" />
@@ -190,15 +303,15 @@ watch(() => props.allTasksArray, (newValue) => {
 
                 </div>
             </div>
-            <div class="min-h-[80vh] min-w-[30vw] rounded-lg backdrop-blur-sm bg-[#171717]/65 p-8 ml-8">
-                <div v-if="selectedTask === null" class="min-h-[80vh] flex items-center justify-center">
+            <div class="min-h-[70vh] min-w-[30vw] rounded-lg backdrop-blur-sm bg-[#171717]/65 p-8 ml-8">
+                <div v-if="selectedTask === null" class="min-h-[70vh] flex items-center justify-center">
                     <div class="mb-[120px]">
                         <p class="text-white font-jakarta text-4xl">Hey There!</p>
                         <p class="text-white font-jakarta text-xl">Please select a Task to show detail</p>
                     </div>
                 </div>
                 <div v-else
-                    class="max-h-[80vh] min-h-[80vh] overflow-x-auto custom-scroll flex flex-col justify-between">
+                    class="max-h-[70vh] min-h-[70vh] overflow-x-auto custom-scroll flex flex-col justify-between">
                     <div>
                         <p class="text-white font-jakarta text-3xl truncate w-80">{{ selectedTask.title }}</p>
 
@@ -226,13 +339,14 @@ watch(() => props.allTasksArray, (newValue) => {
                                 <n-input :input-props="{
                                     id: 'edit-task-description',
                                     name: 'editTaskDescription'
-                                }" v-model:value="selectedTask.description" type="textarea" class="mt-2" />
+                                }" v-model:value="selectedTask.description" type="textarea" class="mt-2"
+                                    @blur="sanitizeTitleTextInput" />
                             </n-config-provider>
                         </div>
 
                         <div class="flex items-center justify-between mt-4">
                             <p class="font-jakarta text-white text-base">Add a subtask:</p>
-                            <n-button circle ghost type="info">
+                            <n-button @click="addSubTask" circle ghost type="info">
                                 <n-icon>
                                     <addIcon />
                                 </n-icon>
@@ -252,9 +366,9 @@ watch(() => props.allTasksArray, (newValue) => {
                                         <n-input :input-props="{
                                             id: `subtask-title-${index}`,
                                             name: 'subtaskTitle'
-                                        }" v-model:value="items.title" class="mr-4" />
+                                        }" v-model:value="items.title" class="mr-4" @blur="sanitizeSubtaskTitleTextInput(index)"/>
 
-                                        <n-button circle ghost type="error" class="!mr-4">
+                                        <n-button @click="deleteSubtasks(items.ID, index)" circle ghost type="error" class="!mr-4">
                                             <n-icon>
                                                 <closeIcon />
                                             </n-icon>
@@ -268,8 +382,8 @@ watch(() => props.allTasksArray, (newValue) => {
                         </div>
                     </div>
                     <div class="flex justify-end">
-                        <n-button type="error">Delete Task</n-button>
-                        <n-button :disabled="!hasChanges" type="info" class="!ml-2">Update Task</n-button>
+                        <n-button @click="deleteSelectedTask" type="error">Delete Task</n-button>
+                        <n-button @click="updateSelectedTask" :disabled="!hasChanges" type="info" class="!ml-2">Update Task</n-button>
                     </div>
                 </div>
             </div>
@@ -284,7 +398,7 @@ watch(() => props.allTasksArray, (newValue) => {
 </template>
 <style scoped>
 .subtask-list {
-    max-height: 300px;
+    max-height: 250px;
     overflow-x: auto;
     scrollbar-width: thin;
     scrollbar-color: #4b5563 transparent;
