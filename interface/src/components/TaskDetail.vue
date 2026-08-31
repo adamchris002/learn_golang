@@ -94,6 +94,17 @@ function sanitizeDescription() {
     taskDescription.value = sanitizeInput(taskDescription.value)
 }
 
+function sanitizeSubtaskTitle(index: number) {
+    if (!substaskArray.value && substaskArray.value === null) {
+        return
+    }
+    const susbTasksData = substaskArray.value[index]
+    if (!susbTasksData) {
+        return
+    }
+    susbTasksData.title = sanitizeInput(susbTasksData.title)
+}
+
 function clearModalValues() {
     taskDueDate.value = ""
     taskDescription.value = ""
@@ -187,7 +198,7 @@ watch(
                                 id: `subtask-title-${index}`,
                                 name: 'subtaskTitle'
                             }" v-model:value="items.title" class="mr-4"
-                                :status="items.title.length === 0 && someAreaMissing ? 'error' : 'success'" />
+                                :status="items.title.length === 0 && someAreaMissing ? 'error' : 'success'" @blur="sanitizeSubtaskTitle(index)"/>
                             <n-button circle ghost type="error" class="!mr-4" @click="deleteSubtasks(items.id, index)">
                                 <n-icon>
                                     <closeIcon />
