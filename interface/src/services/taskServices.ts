@@ -4,6 +4,9 @@ import customParseFormat from 'dayjs/plugin/customParseFormat'
 
 dayjs.extend(customParseFormat)
 
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+})
 
 type task = {
   title: string;
@@ -60,8 +63,8 @@ export type SubTaskResponse = {
 
 export async function getAllTasks(userId: number) {
   try {
-    const result = await axios.get(
-      `http://localhost:8080/allTasks?userId=${userId}`,
+    const result = await api.get(
+      `/allTasks?userId=${userId}`,
     );
     return {
       success: true,
@@ -83,8 +86,8 @@ export async function getAllTasks(userId: number) {
 
 export async function getAllIncompleteTasks(userId: number) {
   try {
-    const result = await axios.get(
-      `http://localhost:8080/incompleteTasks?userId=${userId}`,
+    const result = await api.get(
+      `/incompleteTasks?userId=${userId}`,
     );
     return {
       success: true,
@@ -106,8 +109,8 @@ export async function getAllIncompleteTasks(userId: number) {
 
 export async function getOneWeekTasks(userId: number) {
   try {
-    const result = await axios.get(
-      `http://localhost:8080/oneWeekTasks?userId=${userId}`,
+    const result = await api.get(
+      `/oneWeekTasks?userId=${userId}`,
     );
 
     return {
@@ -130,8 +133,8 @@ export async function getOneWeekTasks(userId: number) {
 
 export async function getTodaysTasks(userId: number) {
   try {
-    const result = await axios.get(
-      `http://localhost:8080/todaysTasks?userId=${userId}`,
+    const result = await api.get(
+      `/todaysTasks?userId=${userId}`,
     );
 
     return {
@@ -154,9 +157,9 @@ export async function getTodaysTasks(userId: number) {
 
 export async function postTodaysTask(data: task) {
   try {
-    const result = await axios({
+    const result = await api({
       method: "POST",
-      url: "http://localhost:8080/addTasks",
+      url: `/addTasks`,
       data: data,
     });
     return {
@@ -179,9 +182,9 @@ export async function updateTaskCompletion(
   data: boolean,
 ) {
   try {
-    const result = await axios({
+    const result = await api({
       method: "PUT",
-      url: `http://localhost:8080/updateTaskCompletion?id=${taskId}&userId=${userId}&data=${data}`,
+      url: `/updateTaskCompletion?id=${taskId}&userId=${userId}&data=${data}`,
     });
 
     const messageData = {
@@ -212,9 +215,9 @@ export async function updateTaskValues(
       description: description,
       subTask: subTask,
     };
-    const result = await axios({
+    const result = await api({
       method: "PUT",
-      url: `http://localhost:8080/updateTaskValues?id=${taskId}&userId=${userId}`,
+      url: `/updateTaskValues?id=${taskId}&userId=${userId}`,
       data: data,
     });
 
@@ -236,9 +239,9 @@ export async function updateTaskValues(
 
 export async function deleteTask(taskId: number, userId: number) {
   try {
-    const result = await axios({
+    const result = await api({
       method: "DELETE",
-      url: `http://localhost:8080/deleteTask?id=${taskId}&userId=${userId}`,
+      url: `/deleteTask?id=${taskId}&userId=${userId}`,
     });
 
     const messageData = {
@@ -258,9 +261,9 @@ export async function deleteTask(taskId: number, userId: number) {
 
 export async function deleteExistingSubtask(subTaskId: number, taskId: number) {
   try {
-    const result = await axios({
+    const result = await api({
       method: "DELETE",
-      url: `http://localhost:8080/deleteSubTask?id=${subTaskId}&taskId=${taskId}`,
+      url: `/deleteSubTask?id=${subTaskId}&taskId=${taskId}`,
     });
     const messageData = {
       status: result.status,
@@ -283,9 +286,9 @@ export async function changeTaskStartDate(
   taskStartDate: string,
 ) {
   try {
-    const result = await axios({
+    const result = await api({
       method: "PUT",
-      url: `http://localhost:8080/updateTaskStartDate?taskId=${taskId}&userId=${userId}`,
+      url: `/updateTaskStartDate?taskId=${taskId}&userId=${userId}`,
       data: {
         task_start: taskStartDate,
       },
@@ -307,9 +310,9 @@ export async function changeTaskStartDate(
 
 // export async function changeTaskToPending(taskId: number, userId: number) {
 //   try {
-//     const result = await axios({
+//     const result = await api({
 //       method: "PUT",
-//       url: `http://localhost:8080/changeTaskToPending?taskId=${taskId}&userId=${userId}`,
+//       url: `/changeTaskToPending?taskId=${taskId}&userId=${userId}`,
 //     });
 //     const messageData = {
 //       status: result.status,
@@ -339,9 +342,9 @@ export async function changeTaskToActive(taskId: number, userId: number, taskDue
       }
     }
 
-    const result = await axios({
+    const result = await api({
       method: "PUT",
-      url: `http://localhost:8080/changeTaskToActive?taskId=${taskId}&userId=${userId}`,
+      url: `/changeTaskToActive?taskId=${taskId}&userId=${userId}`,
       data: {
         due_date: dueDate,
       },
