@@ -2,12 +2,16 @@ import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
 import router from "@/router";
 
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+});
+
 export async function signIn(data: { username: string; password: string }) {
   const authStore = useAuthStore();
 
-  axios({
+  api({
     method: "POST",
-    url: "http://localhost:8080/login",
+    url: `/login`,
     data: data,
   })
     .then((result) => {
@@ -41,9 +45,9 @@ export async function register(data: {
 }) {
   const authStore = useAuthStore();
 
-  axios({
+  api({
     method: "POST",
-    url: "http://localhost:8080/register",
+    url: `/register`,
     data: data,
   })
     .then((result) => {
@@ -71,9 +75,9 @@ export async function verifyTokenAndLogin(username: string) {
   const authStore = useAuthStore();
   const token = localStorage.getItem("token");
 
-  axios({
+  api({
     method: "POST",
-    url: `http://localhost:8080/verifyTokenAndLogin?username=${username}`,
+    url: `/verifyTokenAndLogin?username=${username}`,
     headers: {
       Authorization: `Bearer ${token}`,
     },
