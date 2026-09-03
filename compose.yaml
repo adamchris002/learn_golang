@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:18.6-alpine
+    container_name: mydb-local
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+  
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: myapp-server
+    env_file:
+     - ./server/.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+  interface:
+    build:
+      context: ./interface
+      dockerfile: Dockerfile
+    container_name: myapp-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+
+volumes:
+  postgres_data:

@@ -3,7 +3,7 @@ import { useAuthStore } from "@/stores/auth";
 import router from "@/router";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_BASE_URL,
 });
 
 export async function signIn(data: { username: string; password: string }) {
