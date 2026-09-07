@@ -31,6 +31,8 @@ jobs:
           context: ./interface
           push: true
           tags: ghcr.io/${{ secrets.GHCR_USERNAME }}/learn-golang-interface:latest
+          build-args: |
+            VITE_BASE_URL=${{ secrets.VITE_BASE_URL }}
 
       - name: Deploy on VPS
         uses: appleboy/ssh-action@v1.0.3

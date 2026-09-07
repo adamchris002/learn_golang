@@ -4,6 +4,9 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+ARG VITE_BASE_URL
+ENV VITE_BASE_URL=$VITE_BASE_URL
+
 # Copy dependency files first
 COPY package*.json ./
 
