@@ -271,7 +271,6 @@ watch(() => props.allTasksArray, (newValue) => {
     }
 }, {immediate: true, deep: true})
 
-watch(() => selectedTask.value, (newValue) => { console.log(newValue) }, { immediate: true, deep: true })
 </script>
 <template>
     <div class="relative z-10 w-full px-4 py-8 h-screen scale-container"

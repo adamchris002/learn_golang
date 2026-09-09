@@ -136,7 +136,7 @@ watch(() => props.allIncompleteTasks, (newValue) => {
                             <div v-for="items in pendingTasks" :key="items.ID" class="">
                                 <div class="flex justify-start items-center mt-4">
                                     <div
-                                        class="rounded-lg backdrop-blur-sm inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] px-4 cursor-grab">
+                                        class="rounded-lg backdrop-blur-sm inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] px-4 py-1 cursor-grab">
                                         <p class="text-[#8a8888]">Created At: {{
                                             dayjs(items.CreatedAt).format("DD/MM/YYYY HH:mm") }}</p>
                                         <p class="text-white truncate w-45">{{ items.title }}</p>
@@ -159,7 +159,7 @@ watch(() => props.allIncompleteTasks, (newValue) => {
                             <div v-for="items in pastTasks" :key="items.ID" class="">
                                 <div class="flex justify-start items-center mt-4">
                                     <div
-                                        class="rounded-lg backdrop-blur-sm inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] px-4 cursor-grab">
+                                        class="rounded-lg backdrop-blur-sm inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] px-4 py-1 cursor-grab">
                                         <p class="text-[#8a8888]">Created At: {{
                                             dayjs(items.CreatedAt).format("DD/MM/YYYY HH:mm") }}</p>
                                         <p class="text-white truncate w-45">{{ items.title }}</p>

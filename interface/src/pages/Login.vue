@@ -41,7 +41,6 @@ watch([username, password], () => {
   }
 })
 
-watch(() => scale.value, (newValue) => {console.log(newValue)}, {immediate: true})
 </script>
 <template>
   <div class="h-screen w-screen flex justify-center items-center bg-cover bg-center bg-no-repeat"
