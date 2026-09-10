@@ -11,7 +11,7 @@ import pageIcon from "@/assets/icons/pages.svg"
 import addIcon from "@/assets/icons/add.svg"
 import closeIcon from "@/assets/icons/close.svg"
 import AllTasksItems from "./AllTasksItems.vue";
-import { useItemScale } from "@/composable/pageAdjuster.ts";
+import { useItemScaleV2 } from "@/composable/pageAdjuster.ts";
 import { sanitizeInput } from "@/composable/sanitizeInput.ts";
 
 dayjs.extend(customParseFormat)
@@ -19,7 +19,7 @@ dayjs.extend(isSameOrBefore)
 dayjs.extend(isSameOrAfter)
 
 const user = JSON.parse(localStorage.getItem("user") || "{}")
-const scale = useItemScale()
+const scale = useItemScaleV2()
 
 const props = defineProps<{ allTasksArray: TaskResponse[] }>()
 const emits = defineEmits(['requestCallAllTasks'])
