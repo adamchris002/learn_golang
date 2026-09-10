@@ -6,7 +6,7 @@ import { useCalendarSizeAdjuster } from '@/composable/pageAdjuster';
 import chevronLeftIcon from '@/assets/icons/chevron-left.svg';
 import chevronRightIcon from '@/assets/icons/chevron-right.svg';
 import { NButton, NDropdown, NIcon, NCalendar, NConfigProvider, darkTheme, NDataTable, type DataTableColumns, } from 'naive-ui';
-import { computed, onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 
 dayjs.extend(customParseFormat)
 
@@ -15,13 +15,8 @@ type Option = {
     key: string;
 };
 
-type WeekRow = {
-    label: string
-    [key: string]: string
-}
-
 const calendarSize = useCalendarSizeAdjuster()
-const selectedDay = dayjs()
+const selectedDay = ref(dayjs())
 const selectedOption = ref<Option | undefined>({ label: 'Month', key: 'month' })
 
 //week datas
@@ -30,12 +25,35 @@ const timeDate = ref<string[]>([])
 
 const options = [{ label: 'Month', key: 'month' }, { label: 'Week', key: 'week' }, { label: 'Day', key: 'day' }, { label: 'Agenda', key: 'agenda' }]
 
+function chevronRightAction() {
+    switch (selectedOption.value?.key) {
+        case 'week':
+            selectedDay.value = selectedDay.value.add(1, 'week').startOf('week').add(1, 'day')
+            break
+        case 'day':
+            selectedDay.value = selectedDay.value.add(1, 'day')
+            break
+    }
+}
+
+function chevronLeftAction() {
+    switch (selectedOption.value?.key) {
+        case 'week':
+            selectedDay.value = selectedDay.value.subtract(1, 'week').startOf('week').add(1, 'day')
+            break
+        case 'day':
+            selectedDay.value = selectedDay.value.subtract(1, 'day')
+            break
+    }
+}
+
 function handleOptionSelect(option: string | number) {
     selectedOption.value = options.find((opt) => opt.key === option)
+    selectedDay.value = dayjs()
 }
 
 function getWeek() {
-    const startOfWeek = selectedDay.startOf('week').add(1, 'day')
+    const startOfWeek = selectedDay.value.startOf('week').add(1, 'day')
     weekDate.value = []
     for (let i = 0; i < 7; i++) {
         weekDate.value.push(startOfWeek.add(i, 'day').format('DD/MM/YYYY'))
@@ -43,7 +61,7 @@ function getWeek() {
 }
 
 function generateTime() {
-    const startOfDay = selectedDay.startOf('day')
+    const startOfDay = selectedDay.value.startOf('day')
     const timeArray: string[] = []
     for (let i = 0; i < 24; i++) {
         const time = startOfDay.add(i, 'hour').format('HH:mm')
@@ -56,30 +74,35 @@ onMounted(() => {
     generateTime()
 })
 
-watch(() => selectedDay, (newValue) => {
-    getWeek()
-}, { immediate: true })
+watch(
+    () => selectedDay.value,
+    () => {
+        getWeek()
+    },
+    { immediate: true }
+)
 </script>
 <template>
     <div class="z-10 w-full px-4 py-8 h-screen">
-        <div class="flex justify-between items-center mb-8">
-            <div class="flex items-center">
+        <div :class="['flex items-center', selectedOption?.key !== 'month' ? 'justify-between' : 'justify-end']">
+            <div v-if="selectedOption?.key !== 'month'" class="flex items-center">
                 <div class="cursor-pointer rounded-4xl border-1 border-[#a3a3a3] bg-[#1c1c1c] px-4 py-2">
                     <p class="text-[#a3a3a3] text-xl">Today</p>
                 </div>
-                <n-button circle ghost :bordered="false" class="chevron-btn size-fit"
+                <n-button @click="chevronLeftAction" circle ghost :bordered="false" class="chevron-btn size-fit"
                     :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc', rippleColor: 'none' }">
                     <n-icon size="36">
                         <chevronLeftIcon class="text-4xl" />
                     </n-icon>
                 </n-button>
-                <n-button circle ghost :bordered="false" class="chevron-btn size-fit"
+                <n-button @click="chevronRightAction" circle ghost :bordered="false" class="chevron-btn size-fit"
                     :theme-overrides="{ borderHover: '1px solid #0373fc', borderFocus: '1px solid #0373fc', rippleColor: 'none' }">
                     <n-icon size="36">
                         <chevronRightIcon class="text-4xl" />
                     </n-icon>
                 </n-button>
-                <p class="text-white font-jakarta text-4xl">{{ selectedDay.format('MMMM YYYY') }}</p>
+                <p :class="['text-white font-jakarta text-4xl', selectedOption?.key !== 'month' ? '' : 'pl-4']">{{
+                    selectedDay.format('MMMM YYYY') }}</p>
             </div>
             <div>
                 <n-dropdown trigger="click" :options="options" @select="(option) => handleOptionSelect(option)">
@@ -94,7 +117,7 @@ watch(() => selectedDay, (newValue) => {
         <div v-show="selectedOption?.key === 'month'" class="w-full backdrop-blur-sm"
             :style="{ transform: `scaleX(${calendarSize.scaleX}) scaleY(${calendarSize.scaleY})`, transformOrigin: 'top' }">
             <n-config-provider :theme="darkTheme">
-                <n-calendar />
+                <n-calendar :key="selectedDay.format('YYYY-MM')" :value="selectedDay.valueOf()" />
             </n-config-provider>
         </div>
         <div v-show="selectedOption?.key === 'week'"
@@ -135,9 +158,10 @@ watch(() => selectedDay, (newValue) => {
         <div v-show="selectedOption?.key === 'day'"
             class="w-full max-h-[75vh] overflow-y-auto bg-[#1c1c1c] backdrop-blur-sm custom-scroll">
             <div class="w-full flex justify-center items-center sticky top-0 z-10 bg-[#1c1c1c]"">
-                <div class=" bg-blue-500 rounded-full w-12 h-12 mx-auto flex flex-col items-center justify-center">
-                <p class="text-white">{{ dayjs().format('ddd') }}</p>
-                <p class="text-white text-xl">{{ dayjs().format('DD') }}</p>
+                <div :class="['w-12 h-12 mx-auto flex flex-col items-center justify-center',
+                    dayjs(selectedDay).isSame(dayjs(), 'day') ? 'bg-blue-500 rounded-full' : '' ]">
+                <p class="text-white">{{ dayjs(selectedDay).format('ddd') }}</p>
+                <p class="text-white text-xl">{{ dayjs(selectedDay).format('DD') }}</p>
             </div>
         </div>
         <table class="w-full table-fixed">
@@ -147,9 +171,13 @@ watch(() => selectedDay, (newValue) => {
                 </tr>
             </thead>
             <tbody>
+                <!-- row to give space for time labels -->
+                <tr>
+                    <td class="h-4"></td>
+                </tr>
                 <tr v-for="(time, index) in timeDate" :key="time">
                     <td class="relative">
-                        <p :class="['absolute text-white text-sm', index !== 0 ? '-top-3' : '-top-1']">
+                        <p class="absolute text-white text-sm -top-3">
                             {{ dayjs(time, 'HH:mm').format("h:mm A") }}
                         </p>
                     </td>
@@ -181,8 +209,8 @@ watch(() => selectedDay, (newValue) => {
     color: #0373fc;
 }
 
-:deep(.n-calendar-header) {
-    display: none !important;
+:deep(.n-calendar-header__title) {
+    font-size: 3rem;
 }
 
 :deep(.week-table th) {
