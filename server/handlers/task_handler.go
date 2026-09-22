@@ -44,6 +44,92 @@ func AddTask(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func CallTasksBasedOnWeek(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("userId")
+
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+
+	if err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	weekDateStr := r.URL.Query().Get("weekDate")
+	if weekDateStr == "" {
+		http.Error(w, "Missing week date", http.StatusBadRequest)
+		return
+	}
+
+	layout := "02/01/2006"
+
+	translateWeekToTime, err := time.Parse(layout, weekDateStr)
+	if err != nil {
+		http.Error(w, "Invalid week date format", http.StatusBadRequest)
+		return
+	}
+
+	weekday := int(translateWeekToTime.Weekday())
+	daysSinceMonday := (weekday + 6) % 7
+
+	startOfWeek := time.Date(translateWeekToTime.Year(), translateWeekToTime.Month(), translateWeekToTime.Day(), 0, 0, 0, 0, translateWeekToTime.Location()).
+		AddDate(0, 0, -daysSinceMonday)
+	endOfWeek := startOfWeek.AddDate(0, 0, 7)
+
+	var tasks []models.Task
+	result := database.DB.Preload("Subtasks").
+		Where("user_id = ? AND TO_DATE(task_start, 'DD/MM/YYYY') >= ? AND TO_DATE(task_start, 'DD/MM/YYYY') < ?", userID, startOfWeek, endOfWeek).
+		Find(&tasks)
+
+	if result.Error != nil {
+		http.Error(w, "Failed to fetch tasks", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(tasks)
+}
+
+func CallTaskBasedOnMonth(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("userId")
+
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid userId", http.StatusBadRequest)
+		return
+	}
+
+	layout := "02/01/2006"
+
+	monthDateStr := r.URL.Query().Get("monthDate")
+	if monthDateStr == "" {
+		http.Error(w, "Missing month date", http.StatusBadRequest)
+		return
+	}
+
+	translateMonthToTime, err := time.Parse(layout, monthDateStr)
+	if err != nil {
+		http.Error(w, "Invalid month date format", http.StatusBadRequest)
+		return
+	}
+
+	startOfMonth := time.Date(translateMonthToTime.Year(), translateMonthToTime.Month(), 1, 0, 0, 0, 0, translateMonthToTime.Location())
+	endOfMonth := startOfMonth.AddDate(0, 1, 0)
+
+	var tasks []models.Task
+
+	result := database.DB.Preload("Subtasks").Where("tasks.user_id = ? AND TO_DATE(tasks.due_date, 'DD/MM/YYYY') >= ? AND TO_DATE(tasks.due_date, 'DD/MM/YYYY') < ?", userID, startOfMonth, endOfMonth).Find(&tasks)
+
+	if result.Error != nil {
+		http.Error(w, "Failed to fetch tasks", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(tasks)
+}
+
 func CallAllTasks(w http.ResponseWriter, r *http.Request) {
 	var tasks []models.Task
 

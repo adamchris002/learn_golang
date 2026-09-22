@@ -1,5 +1,55 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
+export function useLoginScale() {
+  const width = ref(window.innerWidth);
+
+  const update = () => {
+    width.value = window.innerWidth;
+  };
+
+  onMounted(() => {
+    window.addEventListener("resize", update);
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener("resize", update);
+  });
+
+  const scale = computed(() => {
+    if (width.value < 1200) return 0.6;
+    if (width.value < 1400) return 0.7;
+    if (width.value < 1550) return 0.8;
+    return { scale: 1, zoom: "100%" };
+  });
+
+  return scale;
+}
+
+export function useRegisterScale() {
+  const width = ref(window.innerWidth);
+
+  const update = () => {
+    width.value = window.innerWidth;
+  };
+
+  onMounted(() => {
+    window.addEventListener("resize", update);
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener("resize", update);
+  });
+
+  const scale = computed(() => {
+    if (width.value < 1200) return 0.5;
+    if (width.value < 1400) return 0.6;
+    if (width.value < 1550) return 0.7;
+    return { scale: 1, zoom: "100%" };
+  });
+
+  return scale;
+}
+
 export function useItemScale() {
   const width = ref(window.innerWidth);
 
@@ -16,9 +66,9 @@ export function useItemScale() {
   });
 
   const scale = computed(() => {
-    if (width.value < 1200) return   {scale: 0.6, zoom: '140%'};
-    if (width.value < 1400) return  {scale: 0.9, zoom: '110%'};
-    return {scale: 1, zoom: '100%'};
+    if (width.value < 1200) return { scale: 0.6, zoom: "140%" };
+    if (width.value < 1400) return { scale: 0.9, zoom: "110%" };
+    return { scale: 1, zoom: "100%" };
   });
 
   return scale;
@@ -39,10 +89,10 @@ export function useItemScaleV2() {
     window.removeEventListener("resize", update);
   });
 
-const scale = computed(() => {
-    if (width.value < 1200) return   {scale: 0.6, zoom: '140%'};
-    if (width.value < 1300) return  {scale: 0.8, zoom: '110%'};
-    return {scale: 1, zoom: '100%'};
+  const scale = computed(() => {
+    if (width.value < 1200) return { scale: 0.6, zoom: "140%" };
+    if (width.value < 1300) return { scale: 0.8, zoom: "110%" };
+    return { scale: 1, zoom: "100%" };
   });
 
   return scale;

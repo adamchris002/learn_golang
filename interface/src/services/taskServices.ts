@@ -14,6 +14,23 @@ type task = {
   task_start: string;
   due_date: string;
   completed: boolean;
+  userId: number;
+};
+
+export type taskV2 = {
+  title: string;
+  description: string;
+  task_start: string;
+  due_date: string;
+  completed: boolean;
+  subtasks: subtask[];
+  userId: number;
+};
+
+type subtask = {
+  id: number;
+  title: string;
+  completed: boolean;
 };
 
 export type TaskResponse = {
@@ -61,11 +78,55 @@ export type SubTaskResponse = {
   taskId: number;
 };
 
-export async function getAllTasks(userId: number) {
+export async function getWeekTasks(time: string, userId: number) {
   try {
     const result = await api.get(
-      `/allTasks?userId=${userId}`,
+      `/callTaskBasedOnWeek?userId=${userId}&weekDate=${time}`,
     );
+    return {
+      success: true,
+      data: result.data,
+      messageData: null,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      data: null,
+      messageData: {
+        status: error.response.status,
+        messageTitle: error.response.data.messageTitle,
+        message: error.response.data.message,
+      },
+    };
+  }
+}
+
+export async function getMonthTasks(time: string, userId: number) {
+  try {
+    const result = await api.get(
+      `/callTaskBasedOnMonth?userId=${userId}&monthDate=${time}`,
+    );
+    return {
+      success: true,
+      data: result.data,
+      messageData: null,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      data: null,
+      messageData: {
+        status: error.response.status,
+        messageTitle: error.response.data.messageTitle,
+        message: error.response.data.message,
+      },
+    };
+  }
+}
+
+export async function getAllTasks(userId: number) {
+  try {
+    const result = await api.get(`/allTasks?userId=${userId}`);
     return {
       success: true,
       data: result.data,
@@ -86,9 +147,7 @@ export async function getAllTasks(userId: number) {
 
 export async function getAllIncompleteTasks(userId: number) {
   try {
-    const result = await api.get(
-      `/incompleteTasks?userId=${userId}`,
-    );
+    const result = await api.get(`/incompleteTasks?userId=${userId}`);
     return {
       success: true,
       data: result.data,
@@ -156,6 +215,27 @@ export async function getTodaysTasks(userId: number) {
 }
 
 export async function postTodaysTask(data: task) {
+  try {
+    const result = await api({
+      method: "POST",
+      url: `/addTasks`,
+      data: data,
+    });
+    return {
+      status: result.status,
+      messageTitle: result.data.messageTitle,
+      message: result.data.message,
+    };
+  } catch (error: any) {
+    return {
+      status: error.response.status,
+      messageTitle: error.response.data.messageTitle,
+      message: error.response.data.message,
+    };
+  }
+}
+
+export async function postTodaysTaskV2(data: taskV2) {
   try {
     const result = await api({
       method: "POST",

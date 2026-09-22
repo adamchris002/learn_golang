@@ -8,7 +8,7 @@ import githubLogo from '@/assets/logos/github_logo.png'
 import googleLogo from '@/assets/logos/google_logo.png'
 
 import { NInput, NButton } from 'naive-ui'
-import { useItemScale } from "@/composable/pageAdjuster"
+import { useLoginScale } from "@/composable/pageAdjuster"
 import { signIn } from "@/services/authServices"
 import router from "@/router"
 
@@ -19,7 +19,7 @@ const password = ref<string>("")
 
 const credentialIncomplete = ref(false)
 
-const scale = useItemScale()
+const scale = useLoginScale()
 
 async function handleSignIn() {
   if (!username.value || !password.value) {
@@ -45,7 +45,7 @@ watch([username, password], () => {
 <template>
   <div class="h-screen w-screen flex justify-center items-center bg-cover bg-center bg-no-repeat"
     :style="{ backgroundImage: `url(${loginBackground})` }">
-    <div :style="{ transform: `scale(${scale.scale})`, transformOrigin: 'center' }"
+    <div :style="{ transform: `scale(${scale})`, transformOrigin: 'center' }"
       class="px-120 py-20 backdrop-blur-sm rounded-2xl inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] scale-container">
       <div class="w-[430px] min-w-[430px] py-10 bg-white/10 inset-shadow-sm rounded-3xl">
         <div class="px-20">
