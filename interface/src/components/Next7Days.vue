@@ -47,7 +47,7 @@ const days = computed<dayTemplate[]>(() => {
     })
 })
 
-function setSelectedTaskInformation(data: any) {
+function setSelectedTaskInformation(data: TaskResponse) {
     openDetails.value = true
     selectedTaskInformation.value = data
 }

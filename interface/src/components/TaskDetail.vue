@@ -159,6 +159,7 @@ watch(
                     <n-date-picker :input-props="{ id: 'my-custom-datepicker-id', name: 'myCustomDatePickerId' }"
                         :is-date-disabled="disablePreviousDate" v-model:formatted-value="taskDueDate"
                         value-format="dd/MM/yyyy"
+                        format="dd/MM/yyyy"
                         :status="(taskDueDate?.length === 0 || taskDueDate === null) && someAreaMissing ? 'error' : 'success'" />
                 </n-config-provider>
             </div>

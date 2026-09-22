@@ -3,10 +3,15 @@ import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 import { useCalendarSizeAdjuster } from '@/composable/pageAdjuster';
 
+//components
+import MyCalendarTaskDetail from '@/components/MyCalendarTaskDetail.vue'
+
 import chevronLeftIcon from '@/assets/icons/chevron-left.svg';
 import chevronRightIcon from '@/assets/icons/chevron-right.svg';
-import { NButton, NDropdown, NIcon, NCalendar, NConfigProvider, darkTheme, NDataTable, type DataTableColumns, } from 'naive-ui';
+import { NButton, NDropdown, NIcon, NCalendar, NConfigProvider, darkTheme, NAlert } from 'naive-ui';
 import { onMounted, ref, watch } from 'vue';
+import { deleteExistingSubtask, deleteTask, getMonthTasks, getWeekTasks, updateTaskValues, type TaskResponse } from '@/services/taskServices';
+import TaskDetail from './TaskDetail.vue';
 
 dayjs.extend(customParseFormat)
 
@@ -15,15 +20,35 @@ type Option = {
     key: string;
 };
 
+const user = JSON.parse(localStorage.getItem("user") || "{}")
+let alertTimeout: ReturnType<typeof setTimeout> | null = null
+
 const calendarSize = useCalendarSizeAdjuster()
 const selectedDay = ref(dayjs())
-const selectedOption = ref<Option | undefined>({ label: 'Month', key: 'month' })
+const selectedOption = ref<Option>({ label: 'Month', key: 'month' })
 
-//week datas
+// label datas
 const weekDate = ref<string[]>([])
 const timeDate = ref<string[]>([])
 
+//datas
+const calendarData = ref<any[]>([])
+const weekData = ref<any[]>([])
+const dayData = ref<any[]>([])
+
+const selectedTaskInformation = ref<TaskResponse | null>(null)
+
+
+//datas for props
+const dateDatas = ref<string>('')
+
+//error message
+const taskErrorMessage = ref<{ status: number; messageTitle: string; message: string } | null>(null)
+
 const options = [{ label: 'Month', key: 'month' }, { label: 'Week', key: 'week' }, { label: 'Day', key: 'day' }, { label: 'Agenda', key: 'agenda' }]
+
+const openTaskInformation = ref<boolean>(false)
+const openCalendarTaskDetail = ref<boolean>(false)
 
 function chevronRightAction() {
     switch (selectedOption.value?.key) {
@@ -48,7 +73,10 @@ function chevronLeftAction() {
 }
 
 function handleOptionSelect(option: string | number) {
-    selectedOption.value = options.find((opt) => opt.key === option)
+    const found = options.find((opt) => opt.key === option)
+    if (found) {
+        selectedOption.value = found
+    }
     selectedDay.value = dayjs()
 }
 
@@ -70,6 +98,93 @@ function generateTime() {
     timeDate.value = timeArray
 }
 
+function openTaskModal(_: number,
+    { year, month, date }: { year: number, month: number, date: number }) {
+    if (selectedOption.value?.key === 'month') {
+        const formattedMonth = String(month).padStart(2, '0')
+        dateDatas.value = `${date}/${formattedMonth}/${year}`
+    }
+    openCalendarTaskDetail.value = !openCalendarTaskDetail.value
+}
+
+function openTaskInformationModal(data: TaskResponse) {
+    openTaskInformation.value = true
+    selectedTaskInformation.value = data
+}
+
+function closeSelectedTaskInformation() {
+    openTaskInformation.value = false
+    selectedTaskInformation.value = null
+}
+
+function closeTaskModal() {
+    openCalendarTaskDetail.value = false
+    dateDatas.value = ''
+}
+
+function getTasksForCalendarDate(year: number, month: number, date: number) {
+    const calendarDate = `${String(date).padStart(2, '0')}/${String(month).padStart(2, '0')}/${String(year)}`
+
+    return calendarData.value.filter(data => data.due_date === calendarDate)
+}
+
+async function handlePanelChange({ year, month }: { year: number, month: number }) {
+    const dateMonth = dayjs(`${year}-${String(month).padStart(2, '0')}-01`, 'YYYY-MM-DD')
+    const result = await getMonthTasks(dateMonth.format("DD/MM/YYYY"), user.id)
+    calendarData.value = result.data
+}
+
+async function fetchData(key: string) {
+    switch (key) {
+        case 'month': {
+            const result = await getMonthTasks(selectedDay.value.format("DD/MM/YYYY"), user.id)
+            calendarData.value = result.data
+            return
+        }
+        case 'week': {
+            const result = await getWeekTasks(selectedDay.value.format("DD/MM/YYYY"), user.id)
+            weekData.value = result.data
+            return
+        }
+        case 'day': {
+
+        }
+        default:
+            return
+
+    }
+}
+
+async function handleUpdateTasks(dueDate: string, description: string, subtasks: { id: number, title: string, completed: boolean }[], taskId: number) {
+    taskErrorMessage.value = await updateTaskValues(dueDate, description, subtasks, taskId, user.id)
+    if (taskErrorMessage.value.status === 200) {
+        fetchData(selectedOption.value.key)
+    }
+}
+
+async function handleResultMessage(data: { status: number, message: string, messageTitle: string }) {
+    taskErrorMessage.value = data
+    if (taskErrorMessage.value.status === 200) {
+        closeTaskModal()
+        fetchData(selectedOption.value.key)
+    }
+}
+
+async function handleDeleteTask(taskId: number) {
+    taskErrorMessage.value = await deleteTask(taskId, user.id)
+    if (taskErrorMessage.value.status === 200) {
+        openTaskInformation.value = false
+        fetchData(selectedOption.value.key)
+    }
+}
+
+async function handleDeleteSubTask(subtaskId: number, taskId: number) {
+    taskErrorMessage.value = await deleteExistingSubtask(subtaskId, taskId)
+    if (taskErrorMessage.value.status === 200) {
+        fetchData(selectedOption.value.key)
+    }
+}
+
 onMounted(() => {
     generateTime()
 })
@@ -78,9 +193,38 @@ watch(
     () => selectedDay.value,
     () => {
         getWeek()
+        fetchData(selectedOption.value.key)
     },
     { immediate: true }
 )
+
+watch(() => selectedOption.value, (newValue) => {
+    if (newValue) {
+        fetchData(newValue.key)
+    }
+}, { immediate: true })
+
+watch(() => calendarData.value, (newValue) => {
+    if (selectedTaskInformation.value !== null && newValue.some(data => data.ID === selectedTaskInformation.value?.ID)) {
+        const getSelectedTaskInformation = newValue.find(data => data.ID === selectedTaskInformation.value?.ID)
+        if (getSelectedTaskInformation) {
+            selectedTaskInformation.value = getSelectedTaskInformation
+        }
+    }
+}, { immediate: true })
+
+watch(() => taskErrorMessage.value, (message) => {
+    if (alertTimeout) {
+        clearTimeout(alertTimeout)
+    }
+
+    if (message) {
+        alertTimeout = setTimeout(() => {
+            taskErrorMessage.value = null
+        }, 5000)
+    }
+},
+    { immediate: true })
 </script>
 <template>
     <div class="z-10 w-full px-4 py-8 h-screen">
@@ -117,7 +261,18 @@ watch(
         <div v-show="selectedOption?.key === 'month'" class="w-full backdrop-blur-sm"
             :style="{ transform: `scaleX(${calendarSize.scaleX}) scaleY(${calendarSize.scaleY})`, transformOrigin: 'top' }">
             <n-config-provider :theme="darkTheme">
-                <n-calendar :key="selectedDay.format('YYYY-MM')" :value="selectedDay.valueOf()" />
+                <n-calendar :key="selectedDay.format('YYYY-MM')" :value="selectedDay.valueOf()"
+                    @update:value="openTaskModal" @panel-change="handlePanelChange">
+                    <template #="{ year, month, date }">
+                        <div class="max-h-[100px] overflow-y-auto custom-calendar-scroll">
+                            <div v-for="task in getTasksForCalendarDate(year, month, date)" :key="task.title"
+                                class=" relative z-9999 border-1 border-[#3a3a3a] rounded-lg mb-2 max-w-[130px]"
+                                @click.stop="openTaskInformationModal(task)">
+                                <p class="font-jakarta p-2 truncate w-32">{{ task.title }}</p>
+                            </div>
+                        </div>
+                    </template>
+                </n-calendar>
             </n-config-provider>
         </div>
         <div v-show="selectedOption?.key === 'week'"
@@ -159,7 +314,7 @@ watch(
             class="w-full max-h-[75vh] overflow-y-auto bg-[#1c1c1c] backdrop-blur-sm custom-scroll">
             <div class="w-full flex justify-center items-center sticky top-0 z-10 bg-[#1c1c1c]"">
                 <div :class="['w-12 h-12 mx-auto flex flex-col items-center justify-center',
-                    dayjs(selectedDay).isSame(dayjs(), 'day') ? 'bg-blue-500 rounded-full' : '' ]">
+                    dayjs(selectedDay).isSame(dayjs(), 'day') ? 'bg-blue-500 rounded-full' : '']">
                 <p class="text-white">{{ dayjs(selectedDay).format('ddd') }}</p>
                 <p class="text-white text-xl">{{ dayjs(selectedDay).format('DD') }}</p>
             </div>
@@ -191,6 +346,16 @@ watch(
 
     </div>
     </div>
+    <MyCalendarTaskDetail :open="openCalendarTaskDetail" @close-modal="closeTaskModal" :dateData="dateDatas"
+        @result-message="handleResultMessage" />
+    <TaskDetail :open="openTaskInformation" :task="selectedTaskInformation" @close-modal="closeSelectedTaskInformation"
+        @update-task-datas="handleUpdateTasks" @delete-task="handleDeleteTask" @delete-subtask="handleDeleteSubTask" />
+    <div class="absolute top-2 right-2 z-9999">
+        <n-alert v-if="taskErrorMessage" :title="taskErrorMessage.messageTitle"
+            :type="taskErrorMessage.status === 200 ? 'success' : 'error'" closable @close="taskErrorMessage = null">
+            {{ taskErrorMessage.message }}
+        </n-alert>
+    </div>
 </template>
 <style scoped>
 .scale-container {
@@ -221,7 +386,46 @@ watch(
     text-align: center !important;
 }
 
+:deep(.n-calendar-dates) {
+    max-height: 1150px !important;
+    overflow-y: auto !important;
+}
+
+:deep(.n-calendar-dates)::-webkit-scrollbar {
+    width: 6px;
+}
+
+:deep(.n-calendar-dates)::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+:deep(.n-calendar-dates)::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 9999px;
+}
+
+:deep(.n-calendar-dates)::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
+
 .custom-scroll::-webkit-scrollbar {
     display: none;
+}
+
+.custom-calendar-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-calendar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-calendar-scroll::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 9999px;
+}
+
+.custom-calendar-scroll::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
 }
 </style>
