@@ -128,6 +128,12 @@ function getTasksForCalendarDate(year: number, month: number, date: number) {
     return calendarData.value.filter(data => data.due_date === calendarDate)
 }
 
+async function handlePanelChange({ year, month }: { year: number, month: number }) {
+    const dateMonth = dayjs(`${year}-${String(month).padStart(2, '0')}-01`, 'YYYY-MM-DD')
+    const result = await getMonthTasks(dateMonth.format("DD/MM/YYYY"), user.id)
+    calendarData.value = result.data
+}
+
 async function fetchData(key: string) {
     switch (key) {
         case 'month': {
@@ -165,7 +171,7 @@ async function handleResultMessage(data: { status: number, message: string, mess
 }
 
 async function handleDeleteTask(taskId: number) {
-        taskErrorMessage.value = await deleteTask(taskId, user.id)
+    taskErrorMessage.value = await deleteTask(taskId, user.id)
     if (taskErrorMessage.value.status === 200) {
         openTaskInformation.value = false
         fetchData(selectedOption.value.key)
@@ -187,6 +193,7 @@ watch(
     () => selectedDay.value,
     () => {
         getWeek()
+        fetchData(selectedOption.value.key)
     },
     { immediate: true }
 )
@@ -255,7 +262,7 @@ watch(() => taskErrorMessage.value, (message) => {
             :style="{ transform: `scaleX(${calendarSize.scaleX}) scaleY(${calendarSize.scaleY})`, transformOrigin: 'top' }">
             <n-config-provider :theme="darkTheme">
                 <n-calendar :key="selectedDay.format('YYYY-MM')" :value="selectedDay.valueOf()"
-                    @update:value="openTaskModal">
+                    @update:value="openTaskModal" @panel-change="handlePanelChange">
                     <template #="{ year, month, date }">
                         <div class="max-h-[100px] overflow-y-auto custom-calendar-scroll">
                             <div v-for="task in getTasksForCalendarDate(year, month, date)" :key="task.title"
@@ -377,6 +384,28 @@ watch(() => taskErrorMessage.value, (message) => {
 
 :deep(.n-data-table-th__title) {
     text-align: center !important;
+}
+
+:deep(.n-calendar-dates) {
+    max-height: 1150px !important;
+    overflow-y: auto !important;
+}
+
+:deep(.n-calendar-dates)::-webkit-scrollbar {
+    width: 6px;
+}
+
+:deep(.n-calendar-dates)::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+:deep(.n-calendar-dates)::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 9999px;
+}
+
+:deep(.n-calendar-dates)::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
 }
 
 .custom-scroll::-webkit-scrollbar {
