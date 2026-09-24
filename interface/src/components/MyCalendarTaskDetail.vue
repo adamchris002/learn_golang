@@ -6,6 +6,7 @@ import closeIcon from '@/assets/icons/close.svg'
 import addIcon from '@/assets/icons/add.svg'
 import { sanitizeInput } from '@/composable/sanitizeInput';
 import { postTodaysTaskV2 } from '@/services/taskServices';
+import dayjs from 'dayjs';
 
 type subtask = {
     id: number;
@@ -60,10 +61,7 @@ function sanitizeSubtaskTitle(index: number) {
 }
 
 function disablePreviousDate(ts: number) {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    return ts < today.getTime()
+    return ts < dayjs().valueOf()
 }
 
 function handleCloseModal() {
@@ -90,7 +88,7 @@ async function handleCreateNewData() {
     const data = {
         title: taskTitle.value,
         description: taskDescription.value,
-        task_start: props.dateData,
+        task_start: dayjs(props.dateData, "DD/MM/YYYY").startOf('day').format("DD/MM/YYYY HH:mm"),
         due_date: taskDueDate.value,
         completed: false,
         subtasks: subtaskArray.value,
@@ -147,7 +145,7 @@ onUnmounted(() => {
                         itemTextColor: '#fff'
                     }
                 }">
-                    <n-date-picker v-model:formatted-value="taskDueDate" value-format="dd/MM/yyyy" format="dd/MM/yyyy"
+                    <n-date-picker type="datetime" v-model:formatted-value="taskDueDate" value-format="dd/MM/yyyy HH:mm" format="dd/MM/yyyy HH:mm"
                         :is-date-disabled="disablePreviousDate" class="ml-2" />
                 </n-config-provider>
             </div>

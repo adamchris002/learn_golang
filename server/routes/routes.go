@@ -27,4 +27,5 @@ func SetupRoutes() {
 	http.HandleFunc("/updateTaskStartDate", handlers.UpdateTaskStartDate)
 	// http.HandleFunc("/changeTaskToPending", handlers.ChangeTaskToPending)
 	http.HandleFunc("/changeTaskToActive", handlers.ChangeTaskToActive)
+	http.HandleFunc("/changeTaskDueDate", handlers.ChangeTaskDueDate)
 }
