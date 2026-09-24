@@ -88,7 +88,7 @@ async function sendTask() {
         const newData = {
             title: textString.value,
             description: '',
-            task_start: dayjs().format("DD/MM/YYYY"),
+            task_start: dayjs().startOf('day').format("DD/MM/YYYY HH:mm"),
             due_date: '',
             completed: false,
             userId: user.id

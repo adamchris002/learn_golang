@@ -443,3 +443,27 @@ export async function changeTaskToActive(taskId: number, userId: number, taskDue
     };
   }
 }
+
+export async function changeTaskDueDate(taskId: number, userId: number, dateData: string) {
+  try {
+    const result = await api({
+      method: "PUT",
+      url: `changeTaskDueDate?taskId=${taskId}&userId=${userId}`,
+      data: {
+        date_data: dateData
+      }
+    })
+
+    return {
+      status: result.status,
+      messageTitle: result.data.messageTitle,
+      message: result.data.message,
+    };
+  } catch (error: any) {
+    return {
+      status: error.response.status,
+      messageTitle: error.response.data.messageTitle,
+      message: error.response.data.message,
+    };
+  }
+}

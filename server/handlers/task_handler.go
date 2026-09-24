@@ -77,7 +77,7 @@ func CallTasksBasedOnWeek(w http.ResponseWriter, r *http.Request) {
 
 	var tasks []models.Task
 	result := database.DB.Preload("Subtasks").
-		Where("user_id = ? AND TO_DATE(task_start, 'DD/MM/YYYY') >= ? AND TO_DATE(task_start, 'DD/MM/YYYY') < ?", userID, startOfWeek, endOfWeek).
+		Where("user_id = ? AND TO_DATE(due_date, 'DD/MM/YYYY') >= ? AND TO_DATE(due_date, 'DD/MM/YYYY') < ?", userID, startOfWeek, endOfWeek).
 		Find(&tasks)
 
 	if result.Error != nil {
@@ -495,9 +495,53 @@ func UpdateTaskStartDate(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	json.NewDecoder(r.Body).Decode(&body)
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message":      "Invalid request body",
+		})
+		return
+	}
 
-	result := database.DB.Model(&models.Task{}).Where("id = ? AND user_id = ?", taskId, userId).Update("task_start", body.StartDate)
+	newStartDate, err := time.Parse("02/01/2006 15:04", body.StartDate)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message":      "Invalid start date format",
+		})
+		return
+	}
+
+	var task models.Task
+
+	getExistingData := database.DB.
+		Where("id = ? AND user_id = ?", taskId, userId).
+		First(&task)
+
+	if getExistingData.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message":      getExistingData.Error.Error(),
+		})
+		return
+	}
+
+	updateData := map[string]interface{}{
+		"task_start": body.StartDate,
+	}
+
+	if task.DueDate != "" {
+		dueDate, err := time.Parse("02/01/2006 15:04", task.DueDate)
+
+		if err == nil && dueDate.Before(newStartDate) {
+			updateData["due_date"] = ""
+		}
+	}
+
+	result := database.DB.Model(&models.Task{}).Where("id = ? AND user_id = ?", taskId, userId).Updates(updateData)
 
 	if result.Error != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -558,7 +602,14 @@ func ChangeTaskToActive(w http.ResponseWriter, r *http.Request) {
 		DueDate string `json:"due_date"`
 	}
 
-	today := time.Now().Format("02/01/2006")
+	now := time.Now()
+	today := time.Date(
+		now.Year(),
+		now.Month(),
+		now.Day(),
+		0, 0, 0, 0,
+		now.Location(),
+	).Format("02/01/2006 15:04")
 
 	taskId, err := strconv.Atoi(r.URL.Query().Get("taskId"))
 	if err != nil || taskId <= 0 {
@@ -580,6 +631,57 @@ func ChangeTaskToActive(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&body)
 
 	result := database.DB.Model(&models.Task{}).Where("id = ? AND user_id = ?", taskId, userId).Select("TaskStart", "DueDate").Updates(models.Task{TaskStart: today, DueDate: body.DueDate})
+
+	if result.Error != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message":      result.Error.Error(),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"messageTitle": "Update Task Success",
+		"message":      fmt.Sprintf("Task with ID %d has been updated", taskId),
+	})
+}
+
+func ChangeTaskDueDate(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		NewDueDate string `json:"date_data"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message":      "Invalid request body",
+		})
+		return
+	}
+
+	taskId, err := strconv.Atoi(r.URL.Query().Get("taskId"))
+	if err != nil || taskId <= 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message":      "Invalid Task ID",
+		})
+	}
+	userId, err := strconv.Atoi(r.URL.Query().Get("userId"))
+	if err != nil || userId <= 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"messageTitle": "Update Task Failed",
+			"message":      "Invalid User ID",
+		})
+	}
+
+	result := database.DB.Model(&models.Task{}).Where("id = ? AND user_id = ?", taskId, userId).Update("due_date", body.NewDueDate)
 
 	if result.Error != nil {
 		w.WriteHeader(http.StatusInternalServerError)

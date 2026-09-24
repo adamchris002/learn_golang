@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { type TaskResponse } from '@/services/taskServices';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat'
 
 import addIcon from '@/assets/icons/add.svg'
 import closeIcon from '@/assets/icons/close.svg'
 import { NModal, NCard, NButton, NIcon, NDatePicker, darkTheme, NConfigProvider, NInput, NCheckbox } from 'naive-ui';
 import { sanitizeInput } from '@/composable/sanitizeInput';
+
+dayjs.extend(customParseFormat)
 
 const props = defineProps<{ open: boolean, task: TaskResponse | null }>()
 const emits = defineEmits(["closeModal", "deleteTask", "updateTaskDatas", "deleteSubtask"])
@@ -18,6 +22,7 @@ type subtask = {
 
 const someAreaMissing = ref<boolean>(false)
 
+const taskStartDate = ref<string | null>(null)
 const taskDueDate = ref<string | null>(null)
 const taskDescription = ref<string>("")
 const substaskArray = ref<subtask[] | null>([])
@@ -61,11 +66,15 @@ const hasChanges = computed(() => {
 })
 
 function disablePreviousDate(ts: number) {
+    if (dayjs(taskStartDate.value, "DD/MM/YYYY HH:mm").isAfter(dayjs())) {
+        const minimumDate = dayjs(taskStartDate.value, "DD/MM/YYYY HH:mm").startOf("day").valueOf()
+        return ts < minimumDate
+    }
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
     return ts < today.getTime()
-}
+} 
 
 function deleteSubtasks(subTaskId: number, index: number) {
     if (subTaskId === 0) {
@@ -106,6 +115,7 @@ function sanitizeSubtaskTitle(index: number) {
 }
 
 function clearModalValues() {
+    taskStartDate.value = ""
     taskDueDate.value = ""
     taskDescription.value = ""
     substaskArray.value = []
@@ -114,7 +124,8 @@ function clearModalValues() {
 watch(
     () => props.task,
     (newValue) => {
-        taskDueDate.value = newValue?.due_date?.slice(0, 10) || null
+        taskStartDate.value = newValue?.task_start || null
+        taskDueDate.value = newValue?.due_date || null
         taskDescription.value = newValue?.description ?? ""
 
         substaskArray.value = (newValue?.subtasks ?? []).map(subtask => ({
@@ -135,7 +146,6 @@ watch(
     },
     { immediate: true, deep: true }
 )
-
 </script>
 <template>
     <n-modal v-model:show="props.open" @after-leave="clearModalValues">
@@ -156,10 +166,10 @@ watch(
                         itemTextColor: '#fff'
                     }
                 }">
-                    <n-date-picker :input-props="{ id: 'my-custom-datepicker-id', name: 'myCustomDatePickerId' }"
+                    <n-date-picker type="datetime" :input-props="{ id: 'my-custom-datepicker-id', name: 'myCustomDatePickerId' }"
                         :is-date-disabled="disablePreviousDate" v-model:formatted-value="taskDueDate"
-                        value-format="dd/MM/yyyy"
-                        format="dd/MM/yyyy"
+                        value-format="dd/MM/yyyy HH:mm" 
+                        format="dd/MM/yyyy HH:mm"
                         :status="(taskDueDate?.length === 0 || taskDueDate === null) && someAreaMissing ? 'error' : 'success'" />
                 </n-config-provider>
             </div>
