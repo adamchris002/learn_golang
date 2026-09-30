@@ -16,7 +16,7 @@ type subtask = {
 
 const user = JSON.parse(localStorage.getItem("user") || "{}")
 
-const props = defineProps<{ open: boolean, dateData: string }>()
+const props = defineProps<{ open: boolean, dateData: string, type: string }>()
 const emits = defineEmits(["closeModal", 'handlePostNewData', "resultMessage"])
 
 const cardTitle = ref<string>('')
@@ -88,7 +88,7 @@ async function handleCreateNewData() {
     const data = {
         title: taskTitle.value,
         description: taskDescription.value,
-        task_start: dayjs(props.dateData, "DD/MM/YYYY").startOf('day').format("DD/MM/YYYY HH:mm"),
+        task_start: props.type === 'month' ? dayjs(props.dateData, "DD/MM/YYYY").startOf('day').format("DD/MM/YYYY HH:mm") : props.dateData,
         due_date: taskDueDate.value,
         completed: false,
         subtasks: subtaskArray.value,

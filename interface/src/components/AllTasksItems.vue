@@ -11,6 +11,7 @@ const emits = defineEmits<{
   (e: 'updateTask', data: TaskResponse, name: string): void
   (e: 'setSelectedTask', data: TaskResponse): void
   (e: 'sendErrorMessage', data: { status: number; messageTitle: string; message: string }): void
+  (e: 'updateTaskCompletion', data: { id: number, completed: boolean }): void
 }>()
 
 const tasksArrayList = ref<TaskResponse[]>([])
@@ -53,6 +54,14 @@ function checkIfUpdateStartDatePossible(event: MoveEvent) {
   }
 }
 
+function handleUpdateTaskComplete(id: number, value: boolean) {
+  const data = {
+    id: id,
+    completed: value
+  }
+  emits('updateTaskCompletion', data)
+}
+
 watch(() => props.tasksArray, (newValue) => {
   tasksArrayList.value = newValue
   emits('shouldExpand', props.name, newValue.length === 0)
@@ -74,7 +83,8 @@ watch(() => props.tasksArray, (newValue) => {
       <div v-for="(tasks, index) in tasksArrayList" :key="tasks.ID" :data-task-id="tasks.ID">
         <div @click="emits('setSelectedTask', tasks)"
           :class="['flex justify-start items-center', index === 0 ? '' : 'mt-4']">
-          <n-checkbox :checked="tasks.completed" />
+          <n-checkbox :checked="tasks.completed"
+            @update-checked="(value: boolean) => handleUpdateTaskComplete(tasks.ID, value)" />
           <div class="ml-4 rounded-lg backdrop-blur-sm inset-shadow-[0_0_80px_rgba(0,0,0,0.25)] px-4 py-1 cursor-grab">
             <p class="text-[#8a8888] font-jakarta">
               Created At:

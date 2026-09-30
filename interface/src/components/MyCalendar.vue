@@ -5,7 +5,7 @@ import { VueDraggable, type DraggableEvent, type MoveEvent } from 'vue-draggable
 import MyCalendarTaskDetail from '@/components/MyCalendarTaskDetail.vue'
 import TaskDetail from './TaskDetail.vue';
 
-import { changeTaskDueDate, deleteExistingSubtask, deleteTask, getMonthTasks, getWeekTasks, updateTaskValues, type TaskResponse } from '@/services/taskServices';
+import { changeTaskDueDate, deleteExistingSubtask, deleteTask, getDayTasks, getMonthTasks, getWeekTasks, updateTaskCompletion, updateTaskValues, type TaskResponse } from '@/services/taskServices';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 import { useCalendarSizeAdjuster } from '@/composable/pageAdjuster';
@@ -33,13 +33,14 @@ const timeDate = ref<string[]>([])
 
 //datas
 const calendarData = ref<TaskResponse[]>([])
-const weekData = ref<any[]>([])
-const dayData = ref<any[]>([])
+const weekData = ref<TaskResponse[]>([])
+const dayData = ref<TaskResponse[]>([])
 
 const selectedTaskInformation = ref<TaskResponse | null>(null)
 
 //datas for props
 const dateDatas = ref<string>('')
+const typeDatas = ref<string>('')
 
 //error message
 const taskErrorMessage = ref<{ status: number; messageTitle: string; message: string } | null>(null)
@@ -100,10 +101,17 @@ function generateTime() {
 
 function openTaskModal(_: number,
     { year, month, date }: { year: number, month: number, date: number }) {
-    if (selectedOption.value?.key === 'month') {
-        const formattedMonth = String(month).padStart(2, '0')
-        dateDatas.value = `${date}/${formattedMonth}/${year}`
-    }
+    const formattedMonth = String(month).padStart(2, '0')
+    dateDatas.value = `${date}/${formattedMonth}/${year}`
+    typeDatas.value = 'month'
+
+    openCalendarTaskDetail.value = !openCalendarTaskDetail.value
+}
+
+function openTaskModalWeek(day: string, time: string, minutes: number) {
+    dateDatas.value = dayjs(day + " " + time, 'DD/MM/YYYY HH:mm').add(minutes, 'minutes').format("DD/MM/YYYY HH:mm")
+    typeDatas.value = 'week'
+
     openCalendarTaskDetail.value = !openCalendarTaskDetail.value
 }
 
@@ -120,6 +128,7 @@ function closeSelectedTaskInformation() {
 function closeTaskModal() {
     openCalendarTaskDetail.value = false
     dateDatas.value = ''
+    typeDatas.value = ''
 }
 
 function getTasksForCalendarDate(year: number, month: number, date: number) {
@@ -140,11 +149,23 @@ function getTasksForCalendarWeek(day: string, time: string, times: number) {
     })
 }
 
+function getTasksForCalendarDay(time: string, times: number) {
+    const day = dayjs(selectedDay.value, "DD/MM/YYYY HH:mm").format('DD/MM/YYYY')
+    const dayTimeString = `${day} ${time}`
+    const start = dayjs(dayTimeString, "DD/MM/YYYY HH:mm").add(times, 'minutes')
+    const end = start.add(15, 'minutes')
+    return dayData.value.filter(data => {
+        const dueDate = dayjs(data.due_date, "DD/MM/YYYY HH:mm")
+
+        return dueDate.isSameOrAfter(start) && dueDate.isBefore(end)
+    })
+}
+
 function checkIfUpdateStartDateWeekPossible(event: MoveEvent) {
     const taskId = Number(event.dragged.dataset.taskId)
     const targetDay = event.to.dataset.dayTime
 
-    let selectedData: TaskResponse
+    let selectedData: TaskResponse | undefined
 
     selectedData = weekData.value.find((data) => data.ID === taskId)
 
@@ -163,7 +184,6 @@ function checkIfUpdateStartDateWeekPossible(event: MoveEvent) {
 
     return true
 }
-
 
 function checkIfUpdateStartDatePossible(event: MoveEvent) {
     const taskId = Number(event.dragged.dataset.taskId)
@@ -189,10 +209,39 @@ function checkIfUpdateStartDatePossible(event: MoveEvent) {
     return true
 }
 
+function checkIfUpdateStartDateDayPossible(event: MoveEvent) {
+    const taskId = Number(event.dragged.dataset.taskId)
+    const targetDay = event.to.dataset.dateTime
+
+    let selectedData: TaskResponse | undefined
+
+    selectedData = calendarData.value.find((data) => data.ID === taskId)
+
+    if (!selectedData) return false
+    const selectedDate = dayjs(targetDay, "DD/MM/YYYY HH:mm")
+    const taskStartDate = dayjs(selectedData.task_start, "DD/MM/YYYY HH:mm")
+
+    if (taskStartDate.isAfter(selectedDate) || selectedDate.isBefore(dayjs().startOf('day'))) {
+        return false
+    }
+    return true
+}
+
+function handleChangeToToday() {
+    selectedDay.value = dayjs()
+}
+
+async function updateTaskCheckbox(id: number, data: boolean) {
+    taskErrorMessage.value = await updateTaskCompletion(id, user.id, data)
+    if (taskErrorMessage.value.status === 200) {
+        fetchData(selectedOption.value.key)
+    }
+}
+
 async function handleUpdateTaskDueDateV2(event: DraggableEvent<TaskResponse>, dateTimeData: string) {
     const taskId = event.data.ID
 
-    const getSelectedTask = calendarData.value.find((data) => data.ID === taskId)
+    const getSelectedTask = weekData.value.find((data) => data.ID === taskId)
 
     if (!getSelectedTask) {
         return
@@ -251,9 +300,8 @@ async function handleUpdateTaskDueDate(
 
 
 async function handlePanelChange({ year, month }: { year: number, month: number }) {
-    const dateMonth = dayjs(`${year}-${String(month).padStart(2, '0')}-01`, 'YYYY-MM-DD')
-    const result = await getMonthTasks(dateMonth.format("DD/MM/YYYY"), user.id)
-    calendarData.value = result.data
+    selectedDay.value = dayjs(`${year}-${String(month).padStart(2, '0')}-01`, 'YYYY-MM-DD')
+
 }
 
 async function fetchData(key: string) {
@@ -269,7 +317,9 @@ async function fetchData(key: string) {
             return
         }
         case 'day': {
-
+            const result = await getDayTasks(selectedDay.value.format('DD/MM/YYYY'), user.id)
+            dayData.value = result.data
+            return
         }
         default:
             return
@@ -326,14 +376,21 @@ watch(() => selectedOption.value, (newValue) => {
     }
 }, { immediate: true })
 
-watch(() => calendarData.value, (newValue) => {
-    if (selectedTaskInformation.value !== null && newValue.some(data => data.ID === selectedTaskInformation.value?.ID)) {
-        const getSelectedTaskInformation = newValue.find(data => data.ID === selectedTaskInformation.value?.ID)
-        if (getSelectedTaskInformation) {
-            selectedTaskInformation.value = getSelectedTaskInformation
-        }
+watch(() => [calendarData.value, weekData.value, dayData.value], () => {
+    const dataMap: Record<string, TaskResponse[]> = {
+        month: calendarData.value,
+        week: weekData.value,
+        day: dayData.value
     }
-}, { immediate: true })
+
+    const activeData = dataMap[selectedOption.value.key]
+    if (!activeData || selectedTaskInformation.value === null) return
+
+    const updated = activeData.find(data => data.ID === selectedTaskInformation.value?.ID)
+    if (updated) {
+        selectedTaskInformation.value = updated
+    }
+}, { immediate: true, deep: true })
 
 watch(() => taskErrorMessage.value, (message) => {
     if (alertTimeout) {
@@ -352,7 +409,8 @@ watch(() => taskErrorMessage.value, (message) => {
     <div class="z-10 w-full px-4 py-8 h-screen">
         <div :class="['flex items-center', selectedOption?.key !== 'month' ? 'justify-between' : 'justify-end']">
             <div v-if="selectedOption?.key !== 'month'" class="flex items-center">
-                <div class="cursor-pointer rounded-4xl border-1 border-[#a3a3a3] bg-[#1c1c1c] px-4 py-2">
+                <div @click="handleChangeToToday"
+                    class="cursor-pointer rounded-4xl border-1 border-[#a3a3a3] bg-[#1c1c1c] px-4 py-2">
                     <p class="text-[#a3a3a3] text-xl">Today</p>
                 </div>
                 <n-button @click="chevronLeftAction" circle ghost :bordered="false" class="chevron-btn size-fit"
@@ -380,11 +438,11 @@ watch(() => taskErrorMessage.value, (message) => {
                 </n-dropdown>
             </div>
         </div>
-        <div v-show="selectedOption?.key === 'month'" class="w-full backdrop-blur-sm"
+        <div v-if="selectedOption?.key === 'month'" class="w-full backdrop-blur-sm"
             :style="{ transform: `scaleX(${calendarSize.scaleX}) scaleY(${calendarSize.scaleY})`, transformOrigin: 'top' }">
             <n-config-provider :theme="darkTheme">
-                <n-calendar :key="selectedDay.format('YYYY-MM')" :value="selectedDay.valueOf()"
-                    @update:value="openTaskModal" @panel-change="handlePanelChange">
+                <n-calendar :value="selectedDay.valueOf()" @update:value="openTaskModal"
+                    @panel-change="handlePanelChange">
                     <template #="{ year, month, date }">
                         <div class="max-h-[100px] overflow-y-auto custom-calendar-scroll">
                             <vue-draggable class="min-h-[90px]"
@@ -398,9 +456,10 @@ watch(() => taskErrorMessage.value, (message) => {
                                 :data-day="`${String(date).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`">
                                 <div v-for="task in getTasksForCalendarDate(year, month, date)" :key="task.ID"
                                     :data-task-id="task.ID"
-                                    class=" relative z-9999 border-1 border-[#3a3a3a] rounded-lg mb-2 max-w-[130px]"
+                                    class=" relative z-9999 border-1 border-[#3a3a3a] rounded-lg mb-2 max-w-[130px] flex items-center justify-start  p-2 "
                                     @click.stop="openTaskInformationModal(task)">
-                                    <p class="font-jakarta p-2 truncate w-32">{{ task.title }}</p>
+                                    <n-checkbox @click.stop :checked="task.completed" @update-checked="(value: boolean) => updateTaskCheckbox(task.ID, value)"/>
+                                    <p class="font-jakarta ml-1 truncate w-32">{{ task.title }}</p>
                                 </div>
                             </vue-draggable>
                         </div>
@@ -408,7 +467,7 @@ watch(() => taskErrorMessage.value, (message) => {
                 </n-calendar>
             </n-config-provider>
         </div>
-        <div v-show="selectedOption?.key === 'week'"
+        <div v-if="selectedOption?.key === 'week'"
             class="w-full max-h-[75vh] overflow-y-auto bg-[#1c1c1c] backdrop-blur-sm custom-scroll">
             <table class="w-full table-fixed">
                 <thead>
@@ -435,28 +494,31 @@ watch(() => taskErrorMessage.value, (message) => {
                         <td class="relative">
                             <p v-if="index !== 0" class="absolute -top-3 text-white text-sm">
                                 {{ dayjs(time, 'HH:mm').format("h:mm A") }}
-                            </p>
+                            </p>c
                         </td>
                         <td v-for="day in weekDate" :key="day" class="border border-gray-600 h-25 max-h-25">
                             <div v-for="times in timeVariations"
                                 class="min-h-[25px] max-h-[25px] overflow-x-auto custom-scroll">
-                                <vue-draggable
+                                <vue-draggable @click="openTaskModalWeek(day, time, times)"
                                     @add="(event) => handleUpdateTaskDueDateV2(event, dayjs(day + ' ' + time, 'DD/MM/YYYY HH:mm').add(times, 'minutes').format('DD/MM/YYYY HH:mm'))"
                                     :onMove="(event) => checkIfUpdateStartDateWeekPossible(event)"
                                     class="min-h-[25px] max-h-[25px] flex items-center overflow-x-auto whitespace-nowrap custom-scroll"
                                     :data-day-time="dayjs(day + ' ' + time, 'DD/MM/YYYY HH:mm').add(times, 'minutes').format('DD/MM/YYYY HH:mm')"
                                     :model-value="getTasksForCalendarWeek(day, time, times)" :sort="false"
-                                    :animation="150" :group="{
+                                    :swap-threshold="0.65" :invert-swap="true" :animation="150" :group="{
                                         name: 'tasks',
                                         pull: true,
                                         put: ['tasks', 'active', 'pending', 'past']
                                     }">
-                                    <div class="max-h-[22px] min-h-[22px] max-w-[120px] flex items-center justify-start px-2 py-[2px] box-border border-1 border-[#a3a3a3] ml-2" :data-task-id="task.ID"
+                                    <div @click.stop="openTaskInformationModal(task)"
+                                        class="max-h-[22px] min-h-[22px] max-w-[100px] flex items-center justify-start px-2 py-[2px] box-border rounded-sm border-1 border-[#a3a3a3] ml-2 cursor-pointer"
+                                        :data-task-id="task.ID"
                                         v-for="task in getTasksForCalendarWeek(day, time, times)">
                                         <n-config-provider :theme="darkTheme">
-                                            <n-checkbox :checked="task.completed" />
+                                            <n-checkbox :checked="task.completed" @click.stop @update-checked="(value: boolean) => updateTaskCheckbox(task.ID, value)"/>
                                         </n-config-provider>
-                                        <p class="font-jakarta text-white text-xs w-20 truncate">{{ task.title }}</p>
+                                        <p class="font-jakarta text-white text-xs w-20 truncate ml-2">{{ task.title }}
+                                        </p>
                                     </div>
                                 </vue-draggable>
                             </div>
@@ -465,44 +527,70 @@ watch(() => taskErrorMessage.value, (message) => {
                 </tbody>
             </table>
         </div>
-        <div v-show="selectedOption?.key === 'day'"
+        <div v-if="selectedOption?.key === 'day'"
             class="w-full max-h-[75vh] overflow-y-auto bg-[#1c1c1c] backdrop-blur-sm custom-scroll">
-            <div class="w-full flex justify-center items-center sticky top-0 z-10 bg-[#1c1c1c]"">
-                <div :class="['w-12 h-12 mx-auto flex flex-col items-center justify-center',
+            <div class="w-full flex justify-center items-center sticky top-0 z-10 bg-[#1c1c1c]">
+                <div :class="['w-16 h-16 mx-auto flex flex-col items-center justify-center',
                     dayjs(selectedDay).isSame(dayjs(), 'day') ? 'bg-blue-500 rounded-full' : '']">
-                <p class="text-white">{{ dayjs(selectedDay).format('ddd') }}</p>
-                <p class="text-white text-xl">{{ dayjs(selectedDay).format('DD') }}</p>
+                    <p class="text-white font-bold">{{ dayjs(selectedDay).format('ddd') }}</p>
+                    <p class="text-white font-bold text-xl">{{ dayjs(selectedDay).format('DD') }}</p>
+                </div>
             </div>
-        </div>
-        <table class="w-full table-fixed">
-            <thead>
-                <tr class="sticky top-0 z-10 bg-[#1c1c1c]">
-                    <th class="w-16 p-4"></th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- row to give space for time labels -->
-                <tr>
-                    <td class="h-4"></td>
-                </tr>
-                <tr v-for="(time, index) in timeDate" :key="time">
-                    <td class="relative">
-                        <p class="absolute text-white text-sm -top-3">
-                            {{ dayjs(time, 'HH:mm').format("h:mm A") }}
-                        </p>
-                    </td>
-                    <td v-for="day in weekDate" :key="day" class="border-t border-gray-600 h-16">
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <div v-show="selectedOption?.key === 'agenda'">
+            <table class="w-full table-fixed">
+                <thead>
+                    <tr class="sticky top-0 z-10 bg-[#1c1c1c]">
+                        <th class="w-16 p-4">
 
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- row to give space for time labels -->
+                    <tr>
+                        <td class="h-4"></td>
+                    </tr>
+                    <tr v-for="time in timeDate" :key="time">
+                        <td class="relative">
+                            <p class="absolute text-white text-sm -top-3">
+                                {{ dayjs(time, 'HH:mm').format("h:mm A") }}
+                            </p>
+                        </td>
+                        <td class="border-t border-gray-600 h-25 max-h-25">
+                            <div v-for="times in timeVariations"
+                                class="min-h-[25px] max-h-[25px] overflow-x-auto custom-scroll">
+                                <vue-draggable @click="openTaskModalWeek(selectedDay.format('DD/MM/YYYY'), time, times)"
+                                    @add="(event) => handleUpdateTaskDueDateV2(event, dayjs(selectedDay.format('DD/MM/YYYY') + ' ' + time, 'DD/MM/YYYY HH:mm').add(times, 'minutes').format('DD/MM/YYYY HH:mm'))"
+                                    :onMove="(event) => checkIfUpdateStartDateDayPossible(event)"
+                                    :model-value="getTasksForCalendarDay(time, times)"
+                                    class="min-h-[25px] max-h-[25px] flex items-center overflow-x-auto whitespace-nowrap custom-scroll"
+                                    :data-date-time="dayjs(selectedDay.format('DD/MM/YYYY') + ' ' + time, 'DD/MM/YYYY HH:mm').add(times, 'minutes').format('DD/MM/YYYY HH:mm')"
+                                    :animation="150" :sort="false" :swap-threshold="0.65" :invert-swap="true" :group="{
+                                        name: 'tasks',
+                                        pull: true,
+                                        put: ['tasks', 'active', 'pending', 'past']
+                                    }">
+                                    <div @click.stop="openTaskInformationModal(task)"
+                                        class="max-h-[22px] min-h-[22px] max-w-[100px] flex items-center justify-start px-2 py-[2px] box-border rounded-sm border-1 border-[#a3a3a3] ml-2 cursor-pointer"
+                                        :data-task-id="task.ID" v-for="task in getTasksForCalendarDay(time, times)">
+                                        <n-config-provider :theme="darkTheme">
+                                            <n-checkbox :checked="task.completed" @click.stop @update-checked="(value: boolean) => updateTaskCheckbox(task.ID, value)" />
+                                        </n-config-provider>
+                                        <p class="font-jakarta text-white text-xs w-20 truncate ml-2">{{ task.title }}
+                                        </p>
+                                    </div>
+                                </vue-draggable>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div v-if="selectedOption?.key === 'agenda'">
+
+        </div>
     </div>
-    </div>
-    <MyCalendarTaskDetail :open="openCalendarTaskDetail" @close-modal="closeTaskModal" :dateData="dateDatas"
-        @result-message="handleResultMessage" />
+    <MyCalendarTaskDetail :open="openCalendarTaskDetail" :type="typeDatas" @close-modal="closeTaskModal"
+        :dateData="dateDatas" @result-message="handleResultMessage" />
     <TaskDetail :open="openTaskInformation" :task="selectedTaskInformation" @close-modal="closeSelectedTaskInformation"
         @update-task-datas="handleUpdateTasks" @delete-task="handleDeleteTask" @delete-subtask="handleDeleteSubTask" />
     <div class="absolute top-2 right-2 z-9999">

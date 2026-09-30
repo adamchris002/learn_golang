@@ -78,6 +78,27 @@ export type SubTaskResponse = {
   taskId: number;
 };
 
+export async function getDayTasks(time: string, userId: number) {
+  try {
+    const result = await api.get(`/callTasksBasedOnDay?userId=${userId}&dayDate=${time}`)
+    return {
+      success: true,
+      data: result.data,
+      messageData: null,
+    };
+  } catch(error: any) {
+    return {
+      success: false,
+      data: null,
+      messageData: {
+        status: error.response.status,
+        messageTitle: error.response.data.messageTitle,
+        message: error.response.data.message,
+      },
+    };
+  }
+}
+
 export async function getWeekTasks(time: string, userId: number) {
   try {
     const result = await api.get(

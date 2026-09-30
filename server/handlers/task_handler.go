@@ -130,6 +130,38 @@ func CallTaskBasedOnMonth(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tasks)
 }
 
+func CallTasksBasedOnDay(w http.ResponseWriter, r *http.Request) {
+	userIDStr := r.URL.Query().Get("userId")
+
+	userID, err := strconv.ParseUint(userIDStr, 10, 32)
+
+	if err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	dayDateStr := r.URL.Query().Get("dayDate")
+	if dayDateStr == "" {
+		http.Error(w, "Missing day date", http.StatusBadRequest)
+		return
+	}
+
+	fmt.Println(dayDateStr)
+
+	var tasks []models.Task
+	result := database.DB.Preload("Subtasks").
+		Where("user_id = ? AND TO_DATE(due_date, 'DD/MM/YYYY') = TO_DATE(?, 'DD/MM/YYYY')", userID, dayDateStr).Find(&tasks)
+
+	if result.Error != nil {
+		http.Error(w, "Failed to fetch tasks", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(tasks)
+}
+
 func CallAllTasks(w http.ResponseWriter, r *http.Request) {
 	var tasks []models.Task
 

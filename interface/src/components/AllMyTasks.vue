@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { changeTaskStartDate, deleteExistingSubtask, deleteTask, updateTaskValues, type TaskResponse } from "@/services/taskServices";
+import { changeTaskStartDate, deleteExistingSubtask, deleteTask, updateTaskCompletion, updateTaskValues, type TaskResponse } from "@/services/taskServices";
 import dayjs from "dayjs";
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
@@ -227,6 +227,13 @@ async function handleUpdateTask(data: TaskResponse, name: string) {
     }
 }
 
+async function updateTaskCheckbox(data: {id: number, completed: boolean}) {
+    taskErrorMessage.value = await updateTaskCompletion(data.id, user.id, data.completed)
+    if (taskErrorMessage.value.status === 200) {
+        emits('requestCallAllTasks')
+    }
+}
+
 onMounted(() => {
     emits('requestCallAllTasks')
 })
@@ -313,14 +320,14 @@ watch(() => props.allTasksArray, (newValue) => {
                         <AllTasksItems name="today" :title="'Today'" :tasksArray="todaysTasks"
                             @shouldExpand="handleShouldExpand" @update-task="handleUpdateTask"
                             @set-selected-task="handleSetSelectedTask"
-                            @send-error-message="handleSetTaskErrorMessage" />
+                            @send-error-message="handleSetTaskErrorMessage"  @update-task-completion="updateTaskCheckbox"/>
                         <AllTasksItems name="tomorrow" :title="'Tomorrow'" :tasksArray="tomorrowsTasks"
                             @shouldExpand="handleShouldExpand" @update-task="handleUpdateTask"
-                            @set-selected-task="handleSetSelectedTask" />
+                            @set-selected-task="handleSetSelectedTask"  @update-task-completion="updateTaskCheckbox"/>
                         <AllTasksItems name="pending" :title="'Pending'" :tasksArray="pendingTasks"
-                            @shouldExpand="handleShouldExpand" @set-selected-task="handleSetSelectedTask" />
+                            @shouldExpand="handleShouldExpand" @set-selected-task="handleSetSelectedTask"  @update-task-completion="updateTaskCheckbox"/>
                         <AllTasksItems name="past" :title="'Past'" :tasksArray="pastTasks"
-                            @shouldExpand="handleShouldExpand" @set-selected-task="handleSetSelectedTask" />
+                            @shouldExpand="handleShouldExpand" @set-selected-task="handleSetSelectedTask" @update-task-completion="updateTaskCheckbox" />
                     </n-collapse>
 
                 </div>
