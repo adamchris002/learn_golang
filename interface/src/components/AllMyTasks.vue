@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { changeTaskStartDate, deleteExistingSubtask, deleteTask, updateTaskValues, type TaskResponse } from "@/services/taskServices";
+import { computed, onMounted, ref, watch } from "vue";
+import { changeTaskStartDate, deleteExistingSubtask, deleteTask, updateTaskCompletion, updateTaskValues, type TaskResponse } from "@/services/taskServices";
 import dayjs from "dayjs";
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore'
@@ -130,10 +130,11 @@ function handleShouldExpand(name: string, shouldExpand: boolean) {
 }
 
 function disablePreviousDate(ts: number) {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    return ts < today.getTime()
+    if (selectedTask.value) {
+        const startDate = dayjs(selectedTask.value.task_start, 'DD/MM/YYYY').startOf('day')
+        return ts < startDate.valueOf()
+    }
+    return false
 }
 
 async function updateSelectedTask() {
@@ -187,26 +188,55 @@ async function deleteSubtasks(id: number, index: number) {
 }
 
 async function handleUpdateTask(data: TaskResponse, name: string) {
+    const originalStartDate = dayjs(
+        data.task_start,
+        "DD/MM/YYYY HH:mm"
+    )
+
+    let newStartDate
+
     switch (name) {
         case 'today':
-            const today = dayjs().startOf('day').format("DD/MM/YYYY")
-            taskErrorMessage.value = await changeTaskStartDate(data.ID, user.id, today)
-            if (taskErrorMessage.value.status === 200) {
-                emits('requestCallAllTasks')
-            }
+            newStartDate = dayjs()
+                .startOf('day')
+                .hour(originalStartDate.hour())
+                .minute(originalStartDate.minute())
             break
+
         case 'tomorrow':
-            const tomorrow = dayjs().startOf('day').add(1, 'day').format("DD/MM/YYYY")
-            taskErrorMessage.value = await changeTaskStartDate(data.ID, user.id, tomorrow)
-            if (taskErrorMessage.value.status === 200) {
-                emits('requestCallAllTasks')
-            }
+            newStartDate = dayjs()
+                .startOf('day')
+                .add(1, 'day')
+                .hour(originalStartDate.hour())
+                .minute(originalStartDate.minute())
             break
-        default: {
+
+        default:
             console.error(`Unknown task category: ${name}`)
-        }
+            return
+    }
+
+    taskErrorMessage.value = await changeTaskStartDate(
+        data.ID,
+        user.id,
+        newStartDate.format("DD/MM/YYYY HH:mm")
+    )
+
+    if (taskErrorMessage.value.status === 200) {
+        emits('requestCallAllTasks')
     }
 }
+
+async function updateTaskCheckbox(data: {id: number, completed: boolean}) {
+    taskErrorMessage.value = await updateTaskCompletion(data.id, user.id, data.completed)
+    if (taskErrorMessage.value.status === 200) {
+        emits('requestCallAllTasks')
+    }
+}
+
+onMounted(() => {
+    emits('requestCallAllTasks')
+})
 
 watch(() => props.allTasksArray, (newValue) => {
     if (newValue.length > 0) {
@@ -243,11 +273,11 @@ watch(() => props.allTasksArray, (newValue) => {
         pendingTasks.value = newValue.filter((data) => {
             const taskStart = dayjs(data.task_start, "DD/MM/YYYY").startOf('day')
 
-            if (!taskStart.isAfter(today)) return false
+            if (!taskStart.isAfter(tomorrow)) return false
 
             if (!data.due_date) return true
             const dueDate = dayjs(data.due_date, "DD/MM/YYYY").startOf('day')
-            return dueDate.isAfter(today)
+            return dueDate.isAfter(tomorrow)
         })
 
         pastTasks.value = newValue.filter((data) => {
@@ -290,14 +320,14 @@ watch(() => props.allTasksArray, (newValue) => {
                         <AllTasksItems name="today" :title="'Today'" :tasksArray="todaysTasks"
                             @shouldExpand="handleShouldExpand" @update-task="handleUpdateTask"
                             @set-selected-task="handleSetSelectedTask"
-                            @send-error-message="handleSetTaskErrorMessage" />
+                            @send-error-message="handleSetTaskErrorMessage"  @update-task-completion="updateTaskCheckbox"/>
                         <AllTasksItems name="tomorrow" :title="'Tomorrow'" :tasksArray="tomorrowsTasks"
                             @shouldExpand="handleShouldExpand" @update-task="handleUpdateTask"
-                            @set-selected-task="handleSetSelectedTask" />
+                            @set-selected-task="handleSetSelectedTask"  @update-task-completion="updateTaskCheckbox"/>
                         <AllTasksItems name="pending" :title="'Pending'" :tasksArray="pendingTasks"
-                            @shouldExpand="handleShouldExpand" @set-selected-task="handleSetSelectedTask" />
+                            @shouldExpand="handleShouldExpand" @set-selected-task="handleSetSelectedTask"  @update-task-completion="updateTaskCheckbox"/>
                         <AllTasksItems name="past" :title="'Past'" :tasksArray="pastTasks"
-                            @shouldExpand="handleShouldExpand" @set-selected-task="handleSetSelectedTask" />
+                            @shouldExpand="handleShouldExpand" @set-selected-task="handleSetSelectedTask" @update-task-completion="updateTaskCheckbox" />
                     </n-collapse>
 
                 </div>
@@ -321,10 +351,10 @@ watch(() => props.allTasksArray, (newValue) => {
                                     itemTextColor: '#fff'
                                 }
                             }">
-                                <n-date-picker class="ml-2" :is-date-disabled="disablePreviousDate"
+                                <n-date-picker class="ml-2" type="datetime" :is-date-disabled="disablePreviousDate"
                                     v-model:formatted-value="formattedDueDate"
                                     :input-props="{ id: 'my-custom-datepicker-id', name: 'myCustomDatePickerId' }"
-                                    value-format="dd/MM/yyyy" format="dd/MM/yyyy" />
+                                    value-format="dd/MM/yyyy HH:mm" format="dd/MM/yyyy HH:mm" />
                             </n-config-provider>
                         </div>
 

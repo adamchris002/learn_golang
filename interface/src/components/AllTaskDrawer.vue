@@ -151,7 +151,7 @@ watch(() => props.allIncompleteTasks, (newValue) => {
                         <p class="text-white font-jakarta">No Past Tasks</p>
                     </div>
                     <div class="max-h-[22vh] overflow-y-auto custom-scroll">
-                        <vue-draggable v-model="pastTasks" @add="" :sort="false" :animation="150" :group="{
+                        <vue-draggable v-model="pastTasks" :sort="false" :animation="150" :group="{
                             name: 'past',
                             pull: true,
                             put: false

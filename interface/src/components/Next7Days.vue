@@ -41,7 +41,7 @@ const days = computed<dayTemplate[]>(() => {
         return {
             day: day.format("DD/MM/YYYY"),
             taskDatas: props.nextSevenDaysTaskArray.filter(
-                (data) => data.task_start === day.format("DD/MM/YYYY")
+                (data) => dayjs(data.task_start, "DD/MM/YYYY HH:mm").format("DD/MM/YYYY") === day.format("DD/MM/YYYY")
             ),
         }
     })
@@ -100,7 +100,7 @@ function checkIfUpdateStartDatePossible(event: MoveEvent) {
 
     if (selectedDate.isAfter(taskDueDate) && selectedData.due_date) {
         taskErrorMessage.value = {
-            message: 'Cannot change task if pass due date',
+            message: 'Task date cannot be changed beyond its due date.',
             messageTitle: 'Edit Start Date Failed',
             status: 400
         }
@@ -114,7 +114,7 @@ async function addNewTask(index: number) {
     const textString = taskInputArray.value[index]
 
 
-    const selectedDay = days.value[index]?.day
+    const selectedDay = dayjs(days.value[index]?.day, 'DD/MM/YYYY').startOf('day').format("DD/MM/YYYY HH:mm")
 
     if (!selectedDay) {
         return
@@ -139,9 +139,39 @@ async function addNewTask(index: number) {
 
 async function updateStartDate(event: DraggableEvent<TaskResponse>, day: string) {
     const taskId = event.data.ID
-    taskErrorMessage.value = await changeTaskStartDate(taskId, user.id, day)
+
+    let originalStartDate
+
+    for (const dayData of days.value) {
+        const task = dayData?.taskDatas.find(data => data.ID === taskId)
+
+        if (task) {
+            originalStartDate = task.task_start
+            break
+        }
+    }
+
+    if (!originalStartDate) {
+        return
+    }
+
+    const originalDateTime = dayjs(
+        originalStartDate,
+        "DD/MM/YYYY HH:mm"
+    )
+
+    const newStartDate = dayjs(day, "DD/MM/YYYY")
+        .hour(originalDateTime.hour())
+        .minute(originalDateTime.minute())
+
+    taskErrorMessage.value = await changeTaskStartDate(
+        taskId,
+        user.id,
+        newStartDate.format("DD/MM/YYYY HH:mm")
+    )
+
     if (taskErrorMessage.value.status === 200) {
-        emits('requestCallNextSevenDays')
+        emits("requestCallNextSevenDays")
     }
 }
 

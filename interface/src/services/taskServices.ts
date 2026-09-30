@@ -78,6 +78,27 @@ export type SubTaskResponse = {
   taskId: number;
 };
 
+export async function getDayTasks(time: string, userId: number) {
+  try {
+    const result = await api.get(`/callTasksBasedOnDay?userId=${userId}&dayDate=${time}`)
+    return {
+      success: true,
+      data: result.data,
+      messageData: null,
+    };
+  } catch(error: any) {
+    return {
+      success: false,
+      data: null,
+      messageData: {
+        status: error.response.status,
+        messageTitle: error.response.data.messageTitle,
+        message: error.response.data.message,
+      },
+    };
+  }
+}
+
 export async function getWeekTasks(time: string, userId: number) {
   try {
     const result = await api.get(
@@ -428,6 +449,30 @@ export async function changeTaskToActive(taskId: number, userId: number, taskDue
       data: {
         due_date: dueDate,
       },
+    })
+
+    return {
+      status: result.status,
+      messageTitle: result.data.messageTitle,
+      message: result.data.message,
+    };
+  } catch (error: any) {
+    return {
+      status: error.response.status,
+      messageTitle: error.response.data.messageTitle,
+      message: error.response.data.message,
+    };
+  }
+}
+
+export async function changeTaskDueDate(taskId: number, userId: number, dateData: string) {
+  try {
+    const result = await api({
+      method: "PUT",
+      url: `changeTaskDueDate?taskId=${taskId}&userId=${userId}`,
+      data: {
+        date_data: dateData
+      }
     })
 
     return {
