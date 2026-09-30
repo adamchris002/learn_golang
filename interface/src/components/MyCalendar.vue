@@ -101,6 +101,12 @@ function generateTime() {
 
 function openTaskModal(_: number,
     { year, month, date }: { year: number, month: number, date: number }) {
+    const selectedDate = dayjs(`${year}-${month}-${date}`, 'YYYY-M-D')
+
+    if (selectedDate.isBefore(dayjs(), 'day')) {
+        return
+    }
+
     const formattedMonth = String(month).padStart(2, '0')
     dateDatas.value = `${date}/${formattedMonth}/${year}`
     typeDatas.value = 'month'
@@ -108,9 +114,14 @@ function openTaskModal(_: number,
     openCalendarTaskDetail.value = !openCalendarTaskDetail.value
 }
 
-function openTaskModalWeek(day: string, time: string, minutes: number) {
+function openTaskModalWeekAndDate(day: string, time: string, minutes: number) {
+    const selectedDate = dayjs(`${day}`, 'DD/MM/YYYY')
+
+    if (selectedDate.isBefore(dayjs(), 'day')) {
+        return
+    }
     dateDatas.value = dayjs(day + " " + time, 'DD/MM/YYYY HH:mm').add(minutes, 'minutes').format("DD/MM/YYYY HH:mm")
-    typeDatas.value = 'week'
+    typeDatas.value = selectedOption.value.key
 
     openCalendarTaskDetail.value = !openCalendarTaskDetail.value
 }
@@ -458,7 +469,8 @@ watch(() => taskErrorMessage.value, (message) => {
                                     :data-task-id="task.ID"
                                     class=" relative z-9999 border-1 border-[#3a3a3a] rounded-lg mb-2 max-w-[130px] flex items-center justify-start  p-2 "
                                     @click.stop="openTaskInformationModal(task)">
-                                    <n-checkbox @click.stop :checked="task.completed" @update-checked="(value: boolean) => updateTaskCheckbox(task.ID, value)"/>
+                                    <n-checkbox @click.stop :checked="task.completed"
+                                        @update-checked="(value: boolean) => updateTaskCheckbox(task.ID, value)" />
                                     <p class="font-jakarta ml-1 truncate w-32">{{ task.title }}</p>
                                 </div>
                             </vue-draggable>
@@ -499,7 +511,7 @@ watch(() => taskErrorMessage.value, (message) => {
                         <td v-for="day in weekDate" :key="day" class="border border-gray-600 h-25 max-h-25">
                             <div v-for="times in timeVariations"
                                 class="min-h-[25px] max-h-[25px] overflow-x-auto custom-scroll">
-                                <vue-draggable @click="openTaskModalWeek(day, time, times)"
+                                <vue-draggable @click="openTaskModalWeekAndDate(day, time, times)"
                                     @add="(event) => handleUpdateTaskDueDateV2(event, dayjs(day + ' ' + time, 'DD/MM/YYYY HH:mm').add(times, 'minutes').format('DD/MM/YYYY HH:mm'))"
                                     :onMove="(event) => checkIfUpdateStartDateWeekPossible(event)"
                                     class="min-h-[25px] max-h-[25px] flex items-center overflow-x-auto whitespace-nowrap custom-scroll"
@@ -515,7 +527,8 @@ watch(() => taskErrorMessage.value, (message) => {
                                         :data-task-id="task.ID"
                                         v-for="task in getTasksForCalendarWeek(day, time, times)">
                                         <n-config-provider :theme="darkTheme">
-                                            <n-checkbox :checked="task.completed" @click.stop @update-checked="(value: boolean) => updateTaskCheckbox(task.ID, value)"/>
+                                            <n-checkbox :checked="task.completed" @click.stop
+                                                @update-checked="(value: boolean) => updateTaskCheckbox(task.ID, value)" />
                                         </n-config-provider>
                                         <p class="font-jakarta text-white text-xs w-20 truncate ml-2">{{ task.title }}
                                         </p>
@@ -558,7 +571,7 @@ watch(() => taskErrorMessage.value, (message) => {
                         <td class="border-t border-gray-600 h-25 max-h-25">
                             <div v-for="times in timeVariations"
                                 class="min-h-[25px] max-h-[25px] overflow-x-auto custom-scroll">
-                                <vue-draggable @click="openTaskModalWeek(selectedDay.format('DD/MM/YYYY'), time, times)"
+                                <vue-draggable @click="openTaskModalWeekAndDate(selectedDay.format('DD/MM/YYYY'), time, times)"
                                     @add="(event) => handleUpdateTaskDueDateV2(event, dayjs(selectedDay.format('DD/MM/YYYY') + ' ' + time, 'DD/MM/YYYY HH:mm').add(times, 'minutes').format('DD/MM/YYYY HH:mm'))"
                                     :onMove="(event) => checkIfUpdateStartDateDayPossible(event)"
                                     :model-value="getTasksForCalendarDay(time, times)"
@@ -573,7 +586,8 @@ watch(() => taskErrorMessage.value, (message) => {
                                         class="max-h-[22px] min-h-[22px] max-w-[100px] flex items-center justify-start px-2 py-[2px] box-border rounded-sm border-1 border-[#a3a3a3] ml-2 cursor-pointer"
                                         :data-task-id="task.ID" v-for="task in getTasksForCalendarDay(time, times)">
                                         <n-config-provider :theme="darkTheme">
-                                            <n-checkbox :checked="task.completed" @click.stop @update-checked="(value: boolean) => updateTaskCheckbox(task.ID, value)" />
+                                            <n-checkbox :checked="task.completed" @click.stop
+                                                @update-checked="(value: boolean) => updateTaskCheckbox(task.ID, value)" />
                                         </n-config-provider>
                                         <p class="font-jakarta text-white text-xs w-20 truncate ml-2">{{ task.title }}
                                         </p>
