@@ -108,7 +108,8 @@ function openTaskModal(_: number,
     }
 
     const formattedMonth = String(month).padStart(2, '0')
-    dateDatas.value = `${date}/${formattedMonth}/${year}`
+    const formattedDay = String(date).padStart(2, '0')
+    dateDatas.value = `${formattedDay}/${formattedMonth}/${year}`
     typeDatas.value = 'month'
 
     openCalendarTaskDetail.value = !openCalendarTaskDetail.value

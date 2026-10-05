@@ -69,7 +69,15 @@ function handleCloseModal() {
     taskTitle.value = ''
     taskDescription.value = ''
     taskDueDate.value = null
+    refreshSubtaskArray()
     emits('closeModal')
+}
+
+function refreshSubtaskArray() {
+    if (subtaskArray.value && subtaskArray.value?.length > 0) {
+        subtaskArray.value = []
+    }
+    subtaskArray.value?.push({ id: 0, title: '', completed: false })
 }
 
 function handleAddSubtask() {
@@ -109,7 +117,7 @@ watch(() => props.dateData, (newData) => {
 }, { immediate: true })
 
 onMounted(() => {
-    subtaskArray.value?.push({ id: 0, title: '', completed: false })
+    refreshSubtaskArray()
 })
 
 onUnmounted(() => {
@@ -145,8 +153,8 @@ onUnmounted(() => {
                         itemTextColor: '#fff'
                     }
                 }">
-                    <n-date-picker type="datetime" v-model:formatted-value="taskDueDate" value-format="dd/MM/yyyy HH:mm" format="dd/MM/yyyy HH:mm"
-                        :is-date-disabled="disablePreviousDate" class="ml-2" />
+                    <n-date-picker type="datetime" v-model:formatted-value="taskDueDate" value-format="dd/MM/yyyy HH:mm"
+                        format="dd/MM/yyyy HH:mm" :is-date-disabled="disablePreviousDate" class="ml-2" />
                 </n-config-provider>
             </div>
             <div class="mb-2">
